@@ -114,14 +114,21 @@ class IPCify
             this._classes[class_name].methods.forEach((method) => 
             {
                 const wrapped_method = createWrappedNode(method) as MethodDeclaration;
-                
+                const return_type = method.type ? method.type.getText() : undefined;
+                wrapped_method.getModifiers()
+
                 const stub_method = stub_class.insertMethod(0, {
-                    name: wrapped_method.getName()
+                    name: wrapped_method.getName(),
+                    isStatic: wrapped_method.isStatic(),
+                    returnType: return_type,
+                    scope: wrapped_method.getScope()
                 })
                 
                 const skeleton_method = skeleton_class.insertMethod(0, {
                     name: wrapped_method.getName(),
-                    isStatic: true
+                    isStatic: true,
+                    returnType: return_type,
+                    scope: wrapped_method.getScope()
                 })
 
                 method.parameters.forEach((parameter) => 

@@ -12,7 +12,7 @@ export class ABC extends EventEmitter
     }
 
     @threadit
-    public pippo(qui: number) {return this.a + qui}
+    public pippo(qui: number): number {return this.a + qui}
 
     @threadit
     public static pluto(_) {return 22}

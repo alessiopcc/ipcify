@@ -1,7 +1,7 @@
 export class ABCStub {
-    pluto(_) {
+    public static pluto(_) {
     }
 
-    pippo(qui: number) {
+    public pippo(qui: number): number {
     }
 }

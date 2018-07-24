@@ -1,7 +1,7 @@
 export class ABCSkeleton {
-    static pluto(_) {
+    public static pluto(_) {
     }
 
-    static pippo(qui: number) {
+    public static pippo(qui: number): number {
     }
 }
