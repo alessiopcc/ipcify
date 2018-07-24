@@ -1,6 +1,5 @@
 export function Threadable<T extends {new(...args: any[]): {}}>(target: T)
 {
-    console.log('Class decorate')
     return class extends target
     {
         public __threadable__ = true;

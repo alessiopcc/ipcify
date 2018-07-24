@@ -1,27 +1,28 @@
-import {readFileSync, writeFileSync} from 'fs';
-import ts from 'typescript';
+import * as fs from 'fs-extra';
+import {resolve as path_resolve} from 'path';
+import Project, {createWrappedNode, MethodDeclaration, ts} from 'ts-simple-ast';
+import {ScriptTarget, SyntaxKind} from 'typescript';
 
 const module_name = require('../package.json').name;
 
+interface ClassThread
+{
+    methods: ts.MethodDeclaration[];
+}
+
 class IPCify
 {
-    private static _imports: {[name: string]: string} = {}
+    private static _imports: {[name: string]: string} = {};
+    private static _classes: {[name: string]: ClassThread} = {};
 
     public static parse(node: ts.Node): void
     {
-        // console.log(ts.SyntaxKind[node.kind])
         switch(node.kind) 
         {
-            case ts.SyntaxKind.ImportDeclaration:
+            case SyntaxKind.ImportDeclaration:
                 this._import_declaration(node as ts.ImportDeclaration);
                 break;
-
-            // case ts.SyntaxKind.ImportClause:
-            //     console.log(Object.keys(node as any))
-            //     console.log(ts.isImportClause(node))
-            //     // console.log((node as ts.ImportClause))
-            //     break;
-            case ts.SyntaxKind.Decorator:
+            case SyntaxKind.Decorator:
                 this._decorator(node as ts.Decorator);
                 break;
             default:
@@ -44,7 +45,7 @@ class IPCify
                     this._imports[element.name.text] = element.name.text;
             })
 
-            console.log('Imported:', this._imports)
+            console.log('Import:', this._imports)
         }
     }
 
@@ -57,28 +58,96 @@ class IPCify
             switch(decorator)
             {
                 case('Threadable'):
-                    if(node.parent && node.parent.name)
+                    if(node.parent && ts.isClassDeclaration(node.parent) && node.parent.name)
                     {
-                        // const class_name = node.parent.name.getText();
-
+                        const class_name = node.parent.name.getText();
+                        this._classes[class_name] = {
+                            methods: []
+                        };
+                        console.log('Class:', class_name);
                     }
+                    else
+                        throw new Error(`Decorator @Threadable parse error, ${node}`)
                     break;
+
+                case('threadit'):
+                    if(node.parent && ts.isMethodDeclaration(node.parent) && node.parent.name && node.parent.parent && ts.isClassDeclaration(node.parent.parent) && node.parent.parent.name)
+                    {
+                        const class_name = node.parent.parent.name.getText();
+                        const threadable = this._classes[class_name];
+                        if(!threadable)
+                            throw new Error('@threadit decorator can be used only in @Threadable classes');
+
+                        if(node.parent.modifiers)
+                        {
+                            for(const modifier of node.parent.modifiers)
+                            {
+                                switch(modifier.kind)
+                                {
+                                    case SyntaxKind.ProtectedKeyword:
+                                    case SyntaxKind.PrivateKeyword:
+                                        throw new Error('@thradit can be applied only to public methods');
+                                }
+                            }
+                        }
+                        threadable.methods.push(node.parent);
+                        console.log('Method:', node.parent.name.getText(), ' - Class', class_name);
+                    }
+                    else
+                        throw new Error(`Decorator @threadit parse error, ${node}`)
             }
         }
     }
 
-    public static save(): void
+    public static save()
     {
-        const file = 'ipc.ts';
-        const cls = ts.createClassDeclaration(undefined, undefined, 'test', undefined, [], []);
-        writeFileSync(file, cls.getFullText());
+        fs.emptyDirSync(path_resolve(out));
+        const project = new Project();
+
+        for(const class_name in this._classes)
+        {
+            const stub = project.createSourceFile(path_resolve(out, 'stub', `${class_name}Stub.ts`));
+            const skeleton = project.createSourceFile(path_resolve(out, 'skeleton', `${class_name}SKeleton.ts`));
+            const stub_class = stub.addClass({name: `${class_name}Stub`, isExported: true});
+            const skeleton_class = skeleton.addClass({name: `${class_name}Skeleton`, isExported: true});
+            
+            this._classes[class_name].methods.forEach((method) => 
+            {
+                const wrapped_method = createWrappedNode(method) as MethodDeclaration;
+                
+                const stub_method = stub_class.insertMethod(0, {
+                    name: wrapped_method.getName()
+                })
+                
+                const skeleton_method = skeleton_class.insertMethod(0, {
+                    name: wrapped_method.getName(),
+                    isStatic: true
+                })
+
+                method.parameters.forEach((parameter) => 
+                {
+                    const name = parameter.name.getText();
+                    const type = parameter.type ? parameter.type.getText() : undefined;
+
+                    stub_method.addParameter({
+                        name, type
+                    });
+                    skeleton_method.addParameter({
+                        name, type
+                    });
+                });
+            });
+        }
+
+        project.save();
     }
 }
 
-const files = process.argv.slice(2);
+const out = process.argv.slice(2, 3)[0];
+const files = process.argv.slice(3);
 files.forEach(file => 
 {
-    let source = ts.createSourceFile(file, readFileSync(file).toString(), ts.ScriptTarget.ES2015, true);
+    let source = ts.createSourceFile(file, fs.readFileSync(file).toString(), ScriptTarget.ES2015, true);
     IPCify.parse(source);
 });
 

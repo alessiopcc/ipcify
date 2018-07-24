@@ -1,7 +1,7 @@
 import {Threadable as tt, threadit} from 'ipcify';
 import {EventEmitter} from 'events';
 
-@tt(1)
+@tt
 export class ABC extends EventEmitter
 {
     private a: number;
@@ -15,5 +15,5 @@ export class ABC extends EventEmitter
     public pippo(qui: number) {return this.a + qui}
 
     @threadit
-    public static pluto() {return 22}
+    public static pluto(_) {return 22}
 }
