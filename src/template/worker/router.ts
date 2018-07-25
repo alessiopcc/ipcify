@@ -1,71 +1,55 @@
-module.exports = `
-import {IPCHermesMessage, IPCHermesMessageType} from './IPCHermes';
-import {HermesSkeleton} from './skeleton/HermesSkeleton';
-import {
-    IPCHermesConnectMessage,
-    IPCHermesCreateMessage,
-    IPCHermesDisconnectMessage,
-    IPCHermesDisposeMessage,
-    IPCHermesGetConnectedMessage,
-    IPCHermesGetOnlineMessage,
-    IPCHermesOffMessage,
-    IPCHermesOnceMessage,
-    IPCHermesOnMessage,
-    IPCHermesResumeMessage,
-    IPCHermesSendMessage,
-    IPCHermesStopMessage,
-} from './types/Hermes';
-
-class IPCRouter
+module.exports = {
+    source: `
+class Router
 {
-    public static async route(message: IPCHermesMessage): Promise<void>
+    public static async route(message: any): Promise<void>
     {
         switch(message.type)
         {
-            // Hermes
             case IPCHermesMessageType.HERMES_CREATE:
-                HermesSkeleton.create(message as IPCHermesCreateMessage);
+                HermesSkeleton.create(message);
                 break;
             case IPCHermesMessageType.HERMES_CONNECT:
-                await HermesSkeleton.connect(message as IPCHermesConnectMessage);
+                await HermesSkeleton.connect(message);
                 break;
             case IPCHermesMessageType.HERMES_DISCONNECT:
-                HermesSkeleton.disconnect(message as IPCHermesDisconnectMessage);
+                HermesSkeleton.disconnect(message);
                 break;
             case IPCHermesMessageType.HERMES_GET_CONNECTED:
-                await HermesSkeleton.get_connected(message as IPCHermesGetConnectedMessage);
+                await HermesSkeleton.get_connected(message);
                 break;
             case IPCHermesMessageType.HERMES_GET_ONLINE:
-                await HermesSkeleton.get_online(message as IPCHermesGetOnlineMessage);
+                await HermesSkeleton.get_online(message);
                 break;
 
             case IPCHermesMessageType.HERMES_RESUME:
-                HermesSkeleton.resume(message as IPCHermesResumeMessage);
+                HermesSkeleton.resume(message);
                 break;
             case IPCHermesMessageType.HERMES_STOP:
-                HermesSkeleton.stop(message as IPCHermesStopMessage);
+                HermesSkeleton.stop(message);
                 break;
             case IPCHermesMessageType.HERMES_DISPOSE:
-                HermesSkeleton.dispose(message as IPCHermesDisposeMessage);
+                HermesSkeleton.dispose(message);
                 break;
 
             case IPCHermesMessageType.HERMES_SEND:
-                await HermesSkeleton.send(message as IPCHermesSendMessage);
+                await HermesSkeleton.send(message);
                 break;
             case IPCHermesMessageType.HERMES_ON:
-                HermesSkeleton.on(message as IPCHermesOnMessage);
+                HermesSkeleton.on(message);
                 break;
             case IPCHermesMessageType.HERMES_ONCE:
-                HermesSkeleton.once(message as IPCHermesOnceMessage);
+                HermesSkeleton.once(message);
                 break;
             case IPCHermesMessageType.HERMES_OFF:
-                HermesSkeleton.off(message as IPCHermesOffMessage);
+                HermesSkeleton.off(message);
                 break;
             default:
-                this._logger.error('[Hermes] Cannot route');
+                console.error('[{{module_name}}] Cannot route');
         }
     }
 }
 
-onmessage = async (message: IPCHermesMessage) => await IPCRouter.route(message);
-`
+onmessage = async (message: IPCHermesMessage) => await Router.route(message);
+    `
+};

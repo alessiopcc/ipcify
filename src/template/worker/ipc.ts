@@ -1,4 +1,5 @@
-module.exports = `
+module.exports = {
+    source: `
 import * as uuid from 'uuid';
 import {EventEmitter} from 'events';
 
@@ -66,10 +67,6 @@ export class IPC extends EventEmitter
             this._exec.postMessage(request);
         });
     }
-
-    private _execute(request: any): void
-    {
-        this._exec.postMessage(request);
-    }
 }
-`
+    `
+}

@@ -1,22 +1,26 @@
-export function Threadable<T extends {new(...args: any[]): {}}>(target: T)
+export function Executable<T extends {new(...args: any[]): {}}>(target: T)
 {
     return class extends target
     {
-        public __threadable__ = true;
-        public static __threadable__ = true;
+        public __executable__ = true;
+        public static __executable__ = true;
     }
 }
 
-export function threadit(_: any, __: string, descriptor: PropertyDescriptor)
+// @ts-ignore
+export function execit(attributes: {create?: boolean})
 {
-    const method = descriptor.value;
-    descriptor.value = function()
+    return (_: any, __: string, descriptor: PropertyDescriptor) =>
     {
-        if(!(this as any).__threadable__)
-            throw new Error('@threadit decorator can be used only in @Threadable classes')
-
-        return method.apply(this, arguments);
-    };
+        const method = descriptor.value;
+        descriptor.value = function()
+        {
+            if(!(this as any).__executable__)
+                throw new Error('@execit decorator can be used only in @Executable classes')
     
-    return descriptor;
+            return method.apply(this, arguments);
+        };
+        
+        return descriptor;
+    }
 }

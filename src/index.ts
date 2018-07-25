@@ -1,13 +1,15 @@
 import * as fs from 'fs-extra';
-import * as path from 'path';
-import Project, {createWrappedNode, MethodDeclaration, ts} from 'ts-simple-ast';
-import {ScriptTarget, SyntaxKind} from 'typescript';
 import handlebars from 'handlebars';
+import * as path from 'path';
+import Project, {ClassDeclaration, createWrappedNode, MethodDeclaration, Scope, ts} from 'ts-simple-ast';
+import {ScriptTarget, SyntaxKind} from 'typescript';
 
-const module_name = require('../package.json').name;
+const ipc_module_name = require('../package.json').name;
 
+// TODO: default export and class wih same name management
 export interface ClassThread
 {
+    path: string;
     methods: ts.MethodDeclaration[];
 }
 
@@ -33,7 +35,7 @@ export class IPCify
 
     private static _import_declaration(node: ts.ImportDeclaration): void
     {
-        if((node.moduleSpecifier as any).text === module_name)
+        if((node.moduleSpecifier as any).text === ipc_module_name)
         {
             if(!node.importClause || !node.importClause.namedBindings ||!ts.isNamedImports(node.importClause.namedBindings))
                 return;
@@ -58,26 +60,27 @@ export class IPCify
         {
             switch(decorator)
             {
-                case('Threadable'):
+                case('Executable'):
                     if(node.parent && ts.isClassDeclaration(node.parent) && node.parent.name)
                     {
                         const class_name = node.parent.name.getText();
                         this._classes[class_name] = {
+                            path: path.resolve(node.getSourceFile().fileName),
                             methods: []
                         };
                         console.log('Class:', class_name);
                     }
                     else
-                        throw new Error(`Decorator @Threadable parse error, ${node}`)
+                        throw new Error(`Decorator @Executable parse error, ${node}`)
                     break;
 
-                case('threadit'):
+                case('execit'):
                     if(node.parent && ts.isMethodDeclaration(node.parent) && node.parent.name && node.parent.parent && ts.isClassDeclaration(node.parent.parent) && node.parent.parent.name)
                     {
                         const class_name = node.parent.parent.name.getText();
-                        const threadable = this._classes[class_name];
-                        if(!threadable)
-                            throw new Error('@threadit decorator can be used only in @Threadable classes');
+                        const executable = this._classes[class_name];
+                        if(!executable)
+                            throw new Error('@execit decorator can be used only in @Executable classes');
 
                         if(node.parent.modifiers)
                         {
@@ -91,11 +94,11 @@ export class IPCify
                                 }
                             }
                         }
-                        threadable.methods.push(node.parent);
+                        executable.methods.push(node.parent);
                         console.log('Method:', node.parent.name.getText(), ' - Class', class_name);
                     }
                     else
-                        throw new Error(`Decorator @threadit parse error, ${node}`)
+                        throw new Error(`Decorator @execit parse error, ${node}`)
             }
         }
     }
@@ -109,61 +112,89 @@ export class IPCify
         const ipc_name = 'IPC.ts';
         const router_name = 'Router.ts';
 
-        const ipc_data = {
+        const ipc_template = require(path.resolve(template_path, 'ipc.js'));
+        const ipc_source_data = {
             exec_path: `./${router_name}`,
             events: ''
         }
-        const ipc = handlebars.compile(require(path.resolve(template_path, 'ipc.js')).trim())(ipc_data);
-        project.createSourceFile(path.resolve(out, ipc_name), ipc);
+        const ipc_source_compiled = handlebars.compile(ipc_template.source)(ipc_source_data);
+        const ipc = project.createSourceFile(path.resolve(out, ipc_name), ipc_source_compiled);
 
-        const router_data = {
+        const router_template = require(path.resolve(template_path, 'router.js'));
+        const router_source_data = {
+            module_name
         }
-        const router = handlebars.compile(require(path.resolve(template_path, 'router.js')).trim())(router_data);
-        project.createSourceFile(path.resolve(out, router_name), router);
+        const router_source_compiled = handlebars.compile(router_template.source)(router_source_data);
+        const router = project.createSourceFile(path.resolve(out, router_name), router_source_compiled);
 
         for(const class_name in this._classes)
         {
-            const stub = project.createSourceFile(path.resolve(out, 'stub', `${class_name}Stub.ts`));
-            const skeleton = project.createSourceFile(path.resolve(out, 'skeleton', `${class_name}SKeleton.ts`));
-            const stub_class = stub.addClass({name: `${class_name}Stub`, isExported: true});
-            const skeleton_class = skeleton.addClass({name: `${class_name}Skeleton`, isExported: true});
+            const stub_class_name = `${class_name}Stub`;
+            const skeleton_class_name = `${class_name}Skeleton`;
+
+            ipc.addImportDeclaration({moduleSpecifier: `./stub/${stub_class_name}`, namedImports: [`${stub_class_name}`]});
+            router.addImportDeclaration({moduleSpecifier: `./skeleton/${skeleton_class_name}`, namedImports: [`${skeleton_class_name}`]});
             
+            const skeleton_template = require(path.resolve(template_path, 'skeleton.js'));
+            const skeleton_source_data = {
+                class_name: skeleton_class_name
+            }
+            const skeleton_source_compiled = handlebars.compile(skeleton_template.source)(skeleton_source_data);
+
+            const stub = project.createSourceFile(path.resolve(out, 'stub', `${stub_class_name}.ts`));
+            const skeleton = project.createSourceFile(path.resolve(out, 'skeleton', `${skeleton_class_name}.ts`), skeleton_source_compiled);
+
+            skeleton.addImportDeclaration({moduleSpecifier: this._classes[class_name].path, namedImports: [class_name]});
+
+            const stub_class = stub.addClass({name: stub_class_name, isExported: true});
+            const skeleton_class = skeleton.getClass(skeleton_class_name) as ClassDeclaration;
+            
+            const skeleton_method_arg_name = 'message';
+
+            let index = 0;
             this._classes[class_name].methods.forEach((method) => 
             {
                 const wrapped_method = createWrappedNode(method) as MethodDeclaration;
                 const return_type = method.type ? method.type.getText() : undefined;
                 wrapped_method.getModifiers()
 
-                // let returns = false;
-                // const body = wrapped_method.getBody() as Block;
-                // body.forEachDescendant((desc) => returns = returns || (ts.isReturnStatement(desc.compilerNode) && (desc as ReturnStatement).))
-
-                const stub_method = stub_class.insertMethod(0, {
+                const stub_method = stub_class.insertMethod(index, {
                     name: wrapped_method.getName(),
-                    isStatic: wrapped_method.isStatic(),
+                    isAsync: true,
                     returnType: return_type,
-                    scope: wrapped_method.getScope()
+                    scope: Scope.Public
                 })
                 
-                const skeleton_method = skeleton_class.insertMethod(0, {
+                const skeleton_method = skeleton_class.insertMethod(index, {
                     name: wrapped_method.getName(),
                     isStatic: true,
-                    returnType: return_type,
-                    scope: wrapped_method.getScope()
+                    isAsync: true,
+                    scope: Scope.Public,
+                    parameters: [{name: skeleton_method_arg_name}]
                 })
 
+                const skeleton_method_body_data = {
+                    object: wrapped_method.isStatic() ? class_name : `this.__${class_name.toLowerCase()}__`,
+                    method: wrapped_method.getName(),
+                    parameters: [] as any
+                }
+                
                 method.parameters.forEach((parameter) => 
                 {
                     const name = parameter.name.getText();
                     const type = parameter.type ? parameter.type.getText() : undefined;
-
+                    
                     stub_method.addParameter({
                         name, type
                     });
-                    skeleton_method.addParameter({
-                        name, type
-                    });
+                    skeleton_method_body_data.parameters.push(`${skeleton_method_arg_name}.${name}`);
                 });
+                skeleton_method_body_data.parameters = skeleton_method_body_data.parameters.join(', ');
+
+                const skeleton_method_body_compiled = handlebars.compile(skeleton_template.method_body)(skeleton_method_body_data);
+                skeleton_method.setBodyText(skeleton_method_body_compiled);
+
+                index++;
             });
         }
 
@@ -172,6 +203,7 @@ export class IPCify
 }
 
 export declare type Template = 'worker';
+const module_name = 'TEST';
 const template = process.argv.slice(2, 3)[0] as Template;
 const out = process.argv.slice(3, 4)[0];
 const files = process.argv.slice(4);

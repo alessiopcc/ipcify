@@ -1,7 +1,7 @@
 export class ABCStub {
-    public static pluto(_) {
+    public async pippo(qui: number): number {
     }
 
-    public pippo(qui: number): number {
+    public async pluto(_, __, ___) {
     }
 }

@@ -1,5 +1,7 @@
+
 import * as uuid from 'uuid';
 import {EventEmitter} from 'events';
+import { ABCStub } from "./stub/ABCStub";
 
 export declare interface IPC
 {
@@ -65,9 +67,5 @@ export class IPC extends EventEmitter
             this._exec.postMessage(request);
         });
     }
-
-    private _execute(request: any): void
-    {
-        this._exec.postMessage(request);
-    }
 }
+    

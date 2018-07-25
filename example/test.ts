@@ -1,4 +1,4 @@
-import {Threadable as tt, threadit} from 'ipcify';
+import {Executable as tt, execit} from 'ipcify';
 import {EventEmitter} from 'events';
 
 @tt
@@ -11,9 +11,9 @@ export class ABC extends EventEmitter
         this.a = 64;
     }
 
-    @threadit
+    @execit
     public pippo(qui: number): number {return this.a + qui}
 
-    @threadit
-    public static pluto(_) {return 22}
+    @execit(true)
+    public static pluto(_, __, ___) {return 22}
 }
