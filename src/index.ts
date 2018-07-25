@@ -1,16 +1,17 @@
 import * as fs from 'fs-extra';
-import {resolve as path_resolve} from 'path';
+import * as path from 'path';
 import Project, {createWrappedNode, MethodDeclaration, ts} from 'ts-simple-ast';
 import {ScriptTarget, SyntaxKind} from 'typescript';
+import handlebars from 'handlebars';
 
 const module_name = require('../package.json').name;
 
-interface ClassThread
+export interface ClassThread
 {
     methods: ts.MethodDeclaration[];
 }
 
-class IPCify
+export class IPCify
 {
     private static _imports: {[name: string]: string} = {};
     private static _classes: {[name: string]: ClassThread} = {};
@@ -99,15 +100,31 @@ class IPCify
         }
     }
 
-    public static save()
+    public static save(template: Template)
     {
-        fs.emptyDirSync(path_resolve(out));
+        fs.emptyDirSync(path.resolve(out));
         const project = new Project();
+
+        const template_path = path.resolve(__dirname, 'template', template);
+        const ipc_name = 'IPC.ts';
+        const router_name = 'Router.ts';
+
+        const ipc_data = {
+            exec_path: `./${router_name}`,
+            events: ''
+        }
+        const ipc = handlebars.compile(require(path.resolve(template_path, 'ipc.js')).trim())(ipc_data);
+        project.createSourceFile(path.resolve(out, ipc_name), ipc);
+
+        const router_data = {
+        }
+        const router = handlebars.compile(require(path.resolve(template_path, 'router.js')).trim())(router_data);
+        project.createSourceFile(path.resolve(out, router_name), router);
 
         for(const class_name in this._classes)
         {
-            const stub = project.createSourceFile(path_resolve(out, 'stub', `${class_name}Stub.ts`));
-            const skeleton = project.createSourceFile(path_resolve(out, 'skeleton', `${class_name}SKeleton.ts`));
+            const stub = project.createSourceFile(path.resolve(out, 'stub', `${class_name}Stub.ts`));
+            const skeleton = project.createSourceFile(path.resolve(out, 'skeleton', `${class_name}SKeleton.ts`));
             const stub_class = stub.addClass({name: `${class_name}Stub`, isExported: true});
             const skeleton_class = skeleton.addClass({name: `${class_name}Skeleton`, isExported: true});
             
@@ -116,6 +133,10 @@ class IPCify
                 const wrapped_method = createWrappedNode(method) as MethodDeclaration;
                 const return_type = method.type ? method.type.getText() : undefined;
                 wrapped_method.getModifiers()
+
+                // let returns = false;
+                // const body = wrapped_method.getBody() as Block;
+                // body.forEachDescendant((desc) => returns = returns || (ts.isReturnStatement(desc.compilerNode) && (desc as ReturnStatement).))
 
                 const stub_method = stub_class.insertMethod(0, {
                     name: wrapped_method.getName(),
@@ -150,12 +171,14 @@ class IPCify
     }
 }
 
-const out = process.argv.slice(2, 3)[0];
-const files = process.argv.slice(3);
+export declare type Template = 'worker';
+const template = process.argv.slice(2, 3)[0] as Template;
+const out = process.argv.slice(3, 4)[0];
+const files = process.argv.slice(4);
 files.forEach(file => 
 {
     let source = ts.createSourceFile(file, fs.readFileSync(file).toString(), ScriptTarget.ES2015, true);
     IPCify.parse(source);
 });
 
-IPCify.save();
+IPCify.save(template);
