@@ -195,14 +195,17 @@ export class IPCify
 
         const template_path = path.resolve(__dirname, 'template', template);
         const ipc_name = 'IPC.ts';
+        const ipc_class_name = 'IPC'
         const router_name = 'Router.ts';
 
         const ipc_template = require(path.resolve(template_path, 'ipc.js'));
         const ipc_source_data = {
+            ipc_class_name, 
             exec_path: `./${router_name}`
         }
         const ipc_source_compiled = handlebars.compile(ipc_template.source.trim())(ipc_source_data);
         const ipc = project.createSourceFile(path.resolve(out, ipc_name), ipc_source_compiled);
+        const ipc_class = ipc.getClass(ipc_class_name) as ClassDeclaration;
 
         const router_template = require(path.resolve(template_path, 'router.js'));
         const router_source_data = {
@@ -223,6 +226,19 @@ export class IPCify
 
             ipc.addImportDeclaration({moduleSpecifier: `./stub/${stub_class_name}`, namedImports: [`${stub_class_name}`]});
             router.addImportDeclaration({moduleSpecifier: `./skeleton/${skeleton_class_name}`, namedImports: [`${skeleton_class_name}`]});
+
+            const ipc_stub_property_name = stub_class_name.toLowerCase()
+            ipc_class.addProperty({
+                name: `_${ipc_stub_property_name}`, 
+                type: stub_class_name,
+                scope: Scope.Private,
+                initializer: `new ${stub_class_name}(this)`
+            });
+            ipc_class.addGetAccessor({
+                name: ipc_stub_property_name,
+                bodyText: `return this._${ipc_stub_property_name}`,
+                scope: Scope.Public
+            })
 
             const stub_template = require(path.resolve(template_path, 'stub.js'));
             const stub_source_data = {

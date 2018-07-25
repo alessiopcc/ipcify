@@ -65,4 +65,10 @@ export class IPC extends EventEmitter
             this._exec.postMessage(request);
         });
     }
+
+    private _abcstub: ABCStub = new ABCStub(this);
+
+    public get abcstub() {
+        return this._abcstub
+    }
 }

@@ -3,14 +3,14 @@ module.exports = {
 import * as uuid from 'uuid';
 import {EventEmitter} from 'events';
 
-export declare interface IPC
+export declare interface {{ipc_class_name}}
 {
     emit(event: 'error', error: ErrorEvent): boolean;
     on(event: 'error', listener: (error: ErrorEvent) => void): this;
     once(event: 'error', listener: (error: ErrorEvent) => void): this;
 }
 
-export class IPC extends EventEmitter
+export class {{ipc_class_name}} extends EventEmitter
 {
     private _exec!: Worker;
     private _requests: {[__id__: string]: (message: any) => void};
