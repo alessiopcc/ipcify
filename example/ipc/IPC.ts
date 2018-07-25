@@ -1,4 +1,3 @@
-
 import * as uuid from 'uuid';
 import {EventEmitter} from 'events';
 import { ABCStub } from "./stub/ABCStub";
@@ -8,7 +7,6 @@ export declare interface IPC
     emit(event: 'error', error: ErrorEvent): boolean;
     on(event: 'error', listener: (error: ErrorEvent) => void): this;
     once(event: 'error', listener: (error: ErrorEvent) => void): this;
-    
 }
 
 export class IPC extends EventEmitter
@@ -68,4 +66,3 @@ export class IPC extends EventEmitter
         });
     }
 }
-    

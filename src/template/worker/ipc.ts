@@ -8,7 +8,6 @@ export declare interface IPC
     emit(event: 'error', error: ErrorEvent): boolean;
     on(event: 'error', listener: (error: ErrorEvent) => void): this;
     once(event: 'error', listener: (error: ErrorEvent) => void): this;
-    {{events}}
 }
 
 export class IPC extends EventEmitter

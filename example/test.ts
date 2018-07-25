@@ -1,10 +1,11 @@
-import {Executable as tt, execit} from 'ipcify';
+import {Executable as tt, execit, execnew} from 'ipcify';
 import {EventEmitter} from 'events';
 
 @tt
 export class ABC extends EventEmitter
 {
     private a: number;
+
     public constructor() 
     {
         super();

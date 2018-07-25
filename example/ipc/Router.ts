@@ -51,4 +51,3 @@ class Router
 }
 
 onmessage = async (message: IPCHermesMessage) => await Router.route(message);
-    

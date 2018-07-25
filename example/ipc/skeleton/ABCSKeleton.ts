@@ -1,11 +1,10 @@
-import { ABC } from "C:\Projects\_repo\ipcify\example\test.ts";
+import { ABC } from "../../test";
 
 const __worker__ = this as Worker;
 
 export class ABCSkeleton
 {
     public static async pippo(message) {
-
         const response: any = {};
         try
         {
@@ -16,11 +15,9 @@ export class ABCSkeleton
             response.__error__ = error.message || error;
         }
         __worker__.postMessage(response);
-            
     }
 
     public static async pluto(message) {
-
         const response: any = {};
         try
         {
@@ -31,7 +28,5 @@ export class ABCSkeleton
             response.__error__ = error.message || error;
         }
         __worker__.postMessage(response);
-            
     }
 }
-    

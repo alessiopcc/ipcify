@@ -7,20 +7,30 @@ export function Executable<T extends {new(...args: any[]): {}}>(target: T)
     }
 }
 
-// @ts-ignore
-export function execit(attributes: {create?: boolean})
+export function execit(_: any, __: string, descriptor: PropertyDescriptor)
 {
-    return (_: any, __: string, descriptor: PropertyDescriptor) =>
+    const method = descriptor.value;
+    descriptor.value = function()
     {
-        const method = descriptor.value;
-        descriptor.value = function()
-        {
-            if(!(this as any).__executable__)
-                throw new Error('@execit decorator can be used only in @Executable classes')
-    
-            return method.apply(this, arguments);
-        };
-        
-        return descriptor;
-    }
+        if(!(this as any).__executable__)
+            throw new Error('@execit decorator can be used only in @Executable classes')
+
+        return method.apply(this, arguments);
+    };
+
+    return descriptor;
+}
+
+export function execnew(_: any, __: string, descriptor: PropertyDescriptor)
+{
+    const method = descriptor.value;
+    descriptor.value = function()
+    {
+        if(!(this as any).__executable__)
+            throw new Error('@execnew decorator can be used only in @Executable classes')
+
+        return method.apply(this, arguments);
+    };
+
+    return descriptor;
 }
