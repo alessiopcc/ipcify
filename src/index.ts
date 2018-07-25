@@ -224,19 +224,25 @@ export class IPCify
             ipc.addImportDeclaration({moduleSpecifier: `./stub/${stub_class_name}`, namedImports: [`${stub_class_name}`]});
             router.addImportDeclaration({moduleSpecifier: `./skeleton/${skeleton_class_name}`, namedImports: [`${skeleton_class_name}`]});
 
+            const stub_template = require(path.resolve(template_path, 'stub.js'));
+            const stub_source_data = {
+                class_name: stub_class_name
+            }
+            const stub_source_compiled = handlebars.compile(stub_template.source.trim())(stub_source_data);
+
             const skeleton_template = require(path.resolve(template_path, 'skeleton.js'));
             const skeleton_source_data = {
                 class_name: skeleton_class_name
             }
             const skeleton_source_compiled = handlebars.compile(skeleton_template.source.trim())(skeleton_source_data);
 
-            const stub = project.createSourceFile(path.resolve(out, 'stub', `${stub_class_name}.ts`));
+            const stub = project.createSourceFile(path.resolve(out, 'stub', `${stub_class_name}.ts`), stub_source_compiled);
             const skeleton = project.createSourceFile(path.resolve(out, 'skeleton', `${skeleton_class_name}.ts`), skeleton_source_compiled);
 
             const skeleton_class_import_path = path.relative(path.resolve(out, 'skeleton'), this._classes[class_name].path).split('.').slice(0, -1).join('.');
             skeleton.addImportDeclaration({moduleSpecifier: skeleton_class_import_path, namedImports: [class_name]});
 
-            const stub_class = stub.addClass({name: stub_class_name, isExported: true});
+            const stub_class = stub.getClass(stub_class_name) as ClassDeclaration;
             const skeleton_class = skeleton.getClass(skeleton_class_name) as ClassDeclaration;
 
             const skeleton_instance_property_name = `__${class_name.toLowerCase()}__`
@@ -247,10 +253,14 @@ export class IPCify
             this._classes[class_name].methods.forEach((method) => 
             {
                 const wrapped_method = createWrappedNode(method) as MethodDeclaration;
-                const return_type = method.type ? method.type.getText() : undefined;
                 if(!wrapped_method.isStatic())
                     create_instance = true;
                 
+                    let return_type = method.type ? method.type.getText() : undefined;
+                    // TODO: bluebird (etc...) management
+                    if(return_type && !return_type.startsWith('Promise')) 
+                        return_type = `Promise<${return_type}>`;
+
                 const stub_method = stub_class.insertMethod(method_index, {
                     name: wrapped_method.getName(),
                     isAsync: true,
@@ -265,6 +275,10 @@ export class IPCify
                     scope: Scope.Public,
                     parameters: [{name: skeleton_method_arg_name}]
                 });
+
+                const stub_method_body_data = {
+                    parameters: [] as any
+                };
 
                 const skeleton_method_body_data = {
                     object: wrapped_method.isStatic() ? class_name : `this.${skeleton_instance_property_name}`,
@@ -283,10 +297,14 @@ export class IPCify
                         type, 
                         hasQuestionToken: optional
                     });
+                    stub_method_body_data.parameters.push(`${name}`);
                     skeleton_method_body_data.parameters.push(`${skeleton_method_arg_name}.${name}`);
                 });
+                stub_method_body_data.parameters = stub_method_body_data.parameters.join(', ');
                 skeleton_method_body_data.parameters = skeleton_method_body_data.parameters.join(', ');
+                const stub_method_body_compiled = handlebars.compile(stub_template.method_body.trim())(stub_method_body_data);
                 const skeleton_method_body_compiled = handlebars.compile(skeleton_template.method_body.trim())(skeleton_method_body_data);
+                stub_method.setBodyText(stub_method_body_compiled);
                 skeleton_method.setBodyText(skeleton_method_body_compiled);
                 
                 method_index++;

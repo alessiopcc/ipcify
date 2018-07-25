@@ -30,11 +30,11 @@ export class ABCSkeleton
         __worker__.postMessage(response);
     }
 
-    public static async __create__(message) {
+    public static async doit(message) {
         const response: any = {__id__: message.__id__};
         try
         {
-            this.__abc__ = await new ABC();
+            this.__abc__ = await ABC.doit(message.a);
         }
         catch(error)
         {

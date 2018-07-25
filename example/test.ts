@@ -13,7 +13,7 @@ export class ABC extends EventEmitter
     }
 
     @execit
-    public pippo(qui: number): number {return this.a + qui}
+    public pippo(qui: number): Promise<void> {return this.a + qui}
 
     @execit
     public static pluto(_, __, ___?) {return 22}

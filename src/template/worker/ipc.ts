@@ -50,7 +50,7 @@ export class IPC extends EventEmitter
             this._exec.terminate();
     }
 
-    private _invoke(request: any): Promise<any>
+    public invoke(request: any): Promise<any>
     {
         return new Promise<any>((resolve, reject) => 
         {
