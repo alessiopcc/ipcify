@@ -13,7 +13,7 @@ export declare interface IPC
 export class IPC extends EventEmitter
 {
     private _exec!: Worker;
-    private _requests: {[request_id: string]: (message: any) => void};
+    private _requests: {[__id__: string]: (message: any) => void};
 
     public constructor()
     {
@@ -32,13 +32,13 @@ export class IPC extends EventEmitter
 
         this._exec.onmessage = (message: MessageEvent) => 
         {
-            if(!message || !message.data || !message.data.request_id)
+            if(!message || !message.data || !message.data.__id__)
                 return;
 
-            const handler = this._requests[message.data.request_id];
+            const handler = this._requests[message.data.__id__];
             if(handler)
             {
-                delete this._requests[message.data.request_id];
+                delete this._requests[message.data.__id__];
                 handler(message.data);
             }
         };
@@ -58,11 +58,11 @@ export class IPC extends EventEmitter
             {
                 if(message.__error__)
                     return reject(new Error(message.__error__));
-                return resolve(message);
+                return resolve(message.__return__);
             };
 
-            request.request_id = uuid.v4();
-            this._requests[request.request_id] = listener;
+            request.__id__ = uuid.v4();
+            this._requests[request.__id__] = listener;
             this._exec.postMessage(request);
         });
     }

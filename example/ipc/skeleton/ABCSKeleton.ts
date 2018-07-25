@@ -5,7 +5,7 @@ const __worker__ = this as Worker;
 export class ABCSkeleton
 {
     public static async pippo(message) {
-        const response: any = {};
+        const response: any = {__id__: message.__id__};
         try
         {
             response.__return__ = await this.__abc__.pippo(message.qui);
@@ -18,7 +18,7 @@ export class ABCSkeleton
     }
 
     public static async pluto(message) {
-        const response: any = {};
+        const response: any = {__id__: message.__id__};
         try
         {
             response.__return__ = await ABC.pluto(message._, message.__, message.___);
@@ -29,4 +29,19 @@ export class ABCSkeleton
         }
         __worker__.postMessage(response);
     }
+
+    public static async __create__(message) {
+        const response: any = {__id__: message.__id__};
+        try
+        {
+            this.__abc__ = await new ABC();
+        }
+        catch(error)
+        {
+            response.__error__ = error.message || error;
+        }
+        __worker__.postMessage(response);
+    }
+
+    private static __abc__: ABC;
 }

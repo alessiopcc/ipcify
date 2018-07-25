@@ -15,6 +15,9 @@ export class ABC extends EventEmitter
     @execit
     public pippo(qui: number): number {return this.a + qui}
 
-    @execit(true)
-    public static pluto(_, __, ___) {return 22}
+    @execit
+    public static pluto(_, __, ___?) {return 22}
+
+    @execnew
+    public static doit(a?: number) {return new ABC()}
 }

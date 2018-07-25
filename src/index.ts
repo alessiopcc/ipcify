@@ -1,8 +1,15 @@
 import * as fs from 'fs-extra';
 import handlebars from 'handlebars';
-import * as path from 'upath';
-import Project, {ClassDeclaration, createWrappedNode, MethodDeclaration, Scope, ts} from 'ts-simple-ast';
+import Project, {
+    ClassDeclaration,
+    ConstructorDeclaration,
+    createWrappedNode,
+    MethodDeclaration,
+    Scope,
+    ts,
+} from 'ts-simple-ast';
 import {ScriptTarget, SyntaxKind} from 'typescript';
+import * as path from 'upath';
 
 const ipc_module_name = require('../package.json').name;
 
@@ -148,18 +155,25 @@ export class IPCify
                         if(!executable)
                             throw new Error('@execnew decorator can be used only in @Executable classes');
 
+                        let static_method = false
                         if(node.parent.modifiers)
                         {
                             for(const modifier of node.parent.modifiers)
                             {
                                 switch(modifier.kind)
                                 {
+                                    case SyntaxKind.StaticKeyword:
+                                        static_method = true;
+                                        break;
                                     case SyntaxKind.ProtectedKeyword:
                                     case SyntaxKind.PrivateKeyword:
                                         throw new Error('@execnew can be applied only to public methods');
                                 }
                             }
                         }
+                        if(!static_method)
+                            throw new Error('@execnew can be applied only to static methods');
+
                         executable.creator = node.parent;
                         console.log('Creator:', node.parent.name.getText(), ' - Class', class_name);
                     }
@@ -225,6 +239,7 @@ export class IPCify
             const stub_class = stub.addClass({name: stub_class_name, isExported: true});
             const skeleton_class = skeleton.getClass(skeleton_class_name) as ClassDeclaration;
 
+            const skeleton_instance_property_name = `__${class_name.toLowerCase()}__`
             const skeleton_method_arg_name = 'message';
 
             let create_instance = false;
@@ -252,7 +267,7 @@ export class IPCify
                 });
 
                 const skeleton_method_body_data = {
-                    object: wrapped_method.isStatic() ? class_name : `this.__${class_name.toLowerCase()}__`,
+                    object: wrapped_method.isStatic() ? class_name : `this.${skeleton_instance_property_name}`,
                     method: wrapped_method.getName(),
                     parameters: [] as any
                 };
@@ -261,9 +276,12 @@ export class IPCify
                 {
                     const name = parameter.name.getText();
                     const type = parameter.type ? parameter.type.getText() : undefined;
-                    
+                    const optional = parameter.questionToken ? true : false;
+
                     stub_method.addParameter({
-                        name, type
+                        name, 
+                        type, 
+                        hasQuestionToken: optional
                     });
                     skeleton_method_body_data.parameters.push(`${skeleton_method_arg_name}.${name}`);
                 });
@@ -275,15 +293,57 @@ export class IPCify
             });
 
             if(create_instance || this._classes[class_name].creator)
-            {
-                if(this._classes[class_name].creator)
-                    console.log('generate creators');
-                else if(this._classes[class_name].constructable)
+            {                
+                if(this._classes[class_name].creator || this._classes[class_name].constructable)
                 {
-                    console.log('generate constructor');
+                    let wrapped_creator: ConstructorDeclaration | MethodDeclaration | undefined;
+                    let name = '__create__';
+                    let create = `new ${class_name}`;
+
+                    if(this._classes[class_name].creator)
+                    {
+                        wrapped_creator = createWrappedNode(this._classes[class_name].creator as ts.MethodDeclaration) as MethodDeclaration;
+                        name = wrapped_creator.getName()
+                        create = `${class_name}.${name}`
+                    }   
+                    else if(this._classes[class_name].constructor)
+                        wrapped_creator = createWrappedNode(this._classes[class_name].constructor as ts.ConstructorDeclaration) as ConstructorDeclaration;
+
+                    const skeleton_creator = skeleton_class.insertMethod(method_index, {
+                        name,
+                        isStatic: true,
+                        isAsync: true,
+                        scope: Scope.Public,
+                        parameters: [{name: skeleton_method_arg_name}]
+                    });
+    
+                    const skeleton_creator_body_data = {
+                        object: skeleton_instance_property_name,
+                        create,
+                        parameters: [] as any
+                    };
+
+                    if(wrapped_creator)
+                    {
+                        wrapped_creator.getParameters().forEach((parameter) =>
+                        {
+                            const name = parameter.getName();    
+                            skeleton_creator_body_data.parameters.push(`${skeleton_method_arg_name}.${name}`);
+                        });
+                    }
+                    skeleton_creator_body_data.parameters = skeleton_creator_body_data.parameters.join(', ');
+                    const skeleton_method_body_compiled = handlebars.compile(skeleton_template.creator_body.trim())(skeleton_creator_body_data);
+                    skeleton_creator.setBodyText(skeleton_method_body_compiled);
                 }
                 else
                     throw new Error(`${class_name} require an instance but is not constructable`);
+                
+                skeleton_class.addProperty({
+                    name: skeleton_instance_property_name,
+                    type: class_name,
+                    isStatic: true,
+                    scope: Scope.Private,
+                });
             }
         }
 
