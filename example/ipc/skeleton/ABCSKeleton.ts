@@ -17,6 +17,19 @@ export class ABCSkeleton
         __worker__.postMessage(response);
     }
 
+    public static async paperino(message) {
+        const response: any = {__id__: message.__id__};
+        try
+        {
+            response.__return__ = await this.__abc__.paperino();
+        }
+        catch(error)
+        {
+            response.__error__ = error.message || error;
+        }
+        __worker__.postMessage(response);
+    }
+
     public static async pluto(message) {
         const response: any = {__id__: message.__id__};
         try

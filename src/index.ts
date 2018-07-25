@@ -253,23 +253,26 @@ export class IPCify
             this._classes[class_name].methods.forEach((method) => 
             {
                 const wrapped_method = createWrappedNode(method) as MethodDeclaration;
+                const method_name = wrapped_method.getName();
                 if(!wrapped_method.isStatic())
                     create_instance = true;
-                
-                    let return_type = method.type ? method.type.getText() : undefined;
-                    // TODO: bluebird (etc...) management
-                    if(return_type && !return_type.startsWith('Promise')) 
-                        return_type = `Promise<${return_type}>`;
+
+                const message_type = `${class_name.toLowerCase()}-${method_name.toLowerCase()}`;
+
+                let return_type = method.type ? method.type.getText() : undefined;
+                // TODO: bluebird (etc...) management
+                if(return_type && !return_type.startsWith('Promise')) 
+                    return_type = `Promise<${return_type}>`;
 
                 const stub_method = stub_class.insertMethod(method_index, {
-                    name: wrapped_method.getName(),
+                    name: method_name,
                     isAsync: true,
                     returnType: return_type,
                     scope: Scope.Public
                 });
 
                 const skeleton_method = skeleton_class.insertMethod(method_index, {
-                    name: wrapped_method.getName(),
+                    name: method_name,
                     isStatic: true,
                     isAsync: true,
                     scope: Scope.Public,
@@ -277,12 +280,13 @@ export class IPCify
                 });
 
                 const stub_method_body_data = {
+                    message_type,
                     parameters: [] as any
                 };
 
                 const skeleton_method_body_data = {
                     object: wrapped_method.isStatic() ? class_name : `this.${skeleton_instance_property_name}`,
-                    method: wrapped_method.getName(),
+                    method: method_name,
                     parameters: [] as any
                 };
 

@@ -4,52 +4,21 @@ class Router
 {
     public static async route(message: any): Promise<void>
     {
-        switch(message.type)
+        switch(message.__type__)
         {
-            case IPCHermesMessageType.HERMES_CREATE:
-                HermesSkeleton.create(message);
-                break;
-            case IPCHermesMessageType.HERMES_CONNECT:
-                await HermesSkeleton.connect(message);
-                break;
-            case IPCHermesMessageType.HERMES_DISCONNECT:
-                HermesSkeleton.disconnect(message);
-                break;
-            case IPCHermesMessageType.HERMES_GET_CONNECTED:
-                await HermesSkeleton.get_connected(message);
-                break;
-            case IPCHermesMessageType.HERMES_GET_ONLINE:
-                await HermesSkeleton.get_online(message);
-                break;
-
-            case IPCHermesMessageType.HERMES_RESUME:
-                HermesSkeleton.resume(message);
-                break;
-            case IPCHermesMessageType.HERMES_STOP:
-                HermesSkeleton.stop(message);
-                break;
-            case IPCHermesMessageType.HERMES_DISPOSE:
-                HermesSkeleton.dispose(message);
-                break;
-
-            case IPCHermesMessageType.HERMES_SEND:
-                await HermesSkeleton.send(message);
-                break;
-            case IPCHermesMessageType.HERMES_ON:
-                HermesSkeleton.on(message);
-                break;
-            case IPCHermesMessageType.HERMES_ONCE:
-                HermesSkeleton.once(message);
-                break;
-            case IPCHermesMessageType.HERMES_OFF:
-                HermesSkeleton.off(message);
-                break;
+            {{~cases}}
             default:
-                console.error('[{{module_name}}] Cannot route');
+                console.error('[{{module_name}}] Cannot route', message.type);
         }
     }
 }
 
-onmessage = async (message: IPCHermesMessage) => await Router.route(message);
+onmessage = async (message: any) => await Router.route(message);
+    `,
+
+    case: `
+case {{type}}:
+    await {{skeleton}}.{{method}}(message);
+    break;
     `
 };
