@@ -1,10 +1,7 @@
-export function Executable<T extends {new(...args: any[]): {}}>(target: T)
+export function Executable(target: any)
 {
-    return class extends target
-    {
-        public __executable__ = true;
-        public static __executable__ = true;
-    }
+    target.__executable__ = true;
+    return target;
 }
 
 export function execit(_: any, __: string, descriptor: PropertyDescriptor)
@@ -12,7 +9,7 @@ export function execit(_: any, __: string, descriptor: PropertyDescriptor)
     const method = descriptor.value;
     descriptor.value = function()
     {
-        if(!(this as any).__executable__)
+        if(!(this as any).__executable__ || !(this as any).constructor.__executable__)
             throw new Error('@execit decorator can be used only in @Executable classes')
 
         return method.apply(this, arguments);
@@ -26,7 +23,7 @@ export function execnew(_: any, __: string, descriptor: PropertyDescriptor)
     const method = descriptor.value;
     descriptor.value = function()
     {
-        if(!(this as any).__executable__)
+        if(!(this as any).__executable__ || !(this as any).constructor.__executable__)
             throw new Error('@execnew decorator can be used only in @Executable classes')
 
         return method.apply(this, arguments);
