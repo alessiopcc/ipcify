@@ -50,7 +50,7 @@ class IPCify
 
     private static _import_declaration(node: ts.ImportDeclaration): void
     {
-        if((node.moduleSpecifier as any).text === ipc_module_name)
+        if((node.moduleSpecifier as any).text.startsWith(ipc_module_name))
         {
             if(!node.importClause || !node.importClause.namedBindings || !ts.isNamedImports(node.importClause.namedBindings))
                 return;

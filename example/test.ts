@@ -1,4 +1,4 @@
-import {Executable as tt, execit, execnew} from 'ipcify';
+import {Executable as tt, execit, execnew} from 'ipcify/decorators';
 import {EventEmitter} from 'events';
 
 @tt

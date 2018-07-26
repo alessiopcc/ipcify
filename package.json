@@ -14,7 +14,7 @@
     "test": "tsc && jest",
     "pack": "node -e require('./scripts/publish.js').pack()",
     "publish": "node -e require('./scripts/publish.js').publish()",
-    "start": "node build/src/index.js TEST worker example/ipc example/test.ts"
+    "start": "node -e require('./scripts/run.js').prepare() && node build/src/index.js TEST worker example/ipc example/test.ts"
   },
   "dependencies": {
     "fs-extra": "^7.0.0",

@@ -48,6 +48,21 @@ function _npm_package()
     console.log('Prepared!');
 }
 
+function _fix_code()
+{
+    console.log('Fixing imports...');
+
+    const js_paths = glob.sync('**/*.js', {cwd: path.resolve(module_path, 'dist'), absolute: true});
+    for(const js_path of js_paths)
+    {
+        let file = fs.readFileSync(js_path).toString();
+        file = file.replace("require('../package", "require('./package");
+        fs.writeFileSync(js_path, file);
+    }
+
+    console.log('Fixed!');
+}
+
 function _files()
 {
     console.log('Copying custom files...');
@@ -78,6 +93,7 @@ function pack()
 
     _clean();
     _compile_ts();
+    _fix_code();
     _npm_package();
     _files();
 
