@@ -2,27 +2,36 @@
   "name": "ipcify",
   "version": "1.0.0",
   "description": "",
+  "private": true,
   "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node build/index.js TEST worker example/ipc example/test.ts"
+  "author": "Alessio Paccoia <alessio.paccoia@cubbit.io>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/alessiopcc/ipcify.git"
   },
-  "author": "",
-  "license": "ISC",
+  "scripts": {
+    "test": "tsc && jest",
+    "pack": "node -e require('./scripts/publish.js').pack()",
+    "publish": "node -e require('./scripts/publish.js').publish()",
+    "start": "node build/src/index.js TEST worker example/ipc example/test.ts"
+  },
   "dependencies": {
     "fs-extra": "^7.0.0",
     "handlebars": "^4.0.11",
     "ts-simple-ast": "^12.7.1",
     "typescript": "^2.9.2",
     "upath": "^1.1.0",
-    "uuid": "^3.3.2",
-    "yargs": "^12.0.1"
+    "uuid": "^3.3.2"
   },
   "devDependencies": {
     "@types/fs-extra": "^5.0.4",
     "@types/handlebars": "^4.0.39",
+    "@types/jest": "^23.3.0",
     "@types/node": "^10.5.0",
     "@types/uuid": "^3.4.3",
-    "@types/yargs": "^11.1.1"
+    "@types/yargs": "^11.1.1",
+    "jest": "^23.4.1",
+    "rimraf": "^2.6.2"
   }
 }

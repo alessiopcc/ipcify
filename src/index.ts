@@ -15,7 +15,7 @@ import * as os from 'os';
 const ipc_module_name = require('../package.json').name;
 
 // TODO: default export and class wih same name management
-export interface ClassThread
+interface ClassThread
 {
     path: string;
     constructable: boolean,
@@ -24,7 +24,7 @@ export interface ClassThread
     methods: ts.MethodDeclaration[];
 }
 
-export class IPCify
+class IPCify
 {
     private static _imports: {[name: string]: string} = {};
     private static _classes: {[name: string]: ClassThread} = {};
