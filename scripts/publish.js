@@ -2,6 +2,7 @@
 
 const child_process = require('child_process');
 const fs = require('fs-extra');
+const glob = require('glob');
 const path = require('path');
 const rimraf = require('rimraf');
 const module_path = path.resolve(__dirname, '..');
