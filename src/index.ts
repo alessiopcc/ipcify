@@ -408,10 +408,10 @@ export class IPCify
 }
 
 export declare type Template = 'worker';
-const module_name = 'TEST';
-const template = process.argv.slice(2, 3)[0] as Template;
-const out = process.argv.slice(3, 4)[0];
-const files = process.argv.slice(4);
+const module_name = process.argv.slice(2, 3)[0];
+const template = process.argv.slice(3, 4)[0] as Template;
+const out = process.argv.slice(4, 5)[0];
+const files = process.argv.slice(5);
 files.forEach(file => 
 {
     let source = ts.createSourceFile(file, fs.readFileSync(file).toString(), ScriptTarget.ES2015, true);
