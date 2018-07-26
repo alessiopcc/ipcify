@@ -1,23 +1,25 @@
 module.exports = {
     source: `
+const __worker__ = this as Worker;
+
 class Router
 {
     public static async route(message: any): Promise<void>
     {
         switch(message.__type__)
         {
-            {{~cases}}
+            {{{cases}}}
             default:
                 console.error('[{{module_name}}] Cannot route', message.type);
         }
     }
 }
 
-onmessage = async (message: any) => await Router.route(message);
+__worker__.onmessage = async (message: any) => await Router.route(message);
     `,
 
     case: `
-case {{type}}:
+case '{{type}}':
     await {{skeleton}}.{{method}}(message);
     break;
     `

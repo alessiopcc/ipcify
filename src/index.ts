@@ -10,6 +10,7 @@ import Project, {
 } from 'ts-simple-ast';
 import {ScriptTarget, SyntaxKind} from 'typescript';
 import * as path from 'upath';
+import * as os from 'os';
 
 const ipc_module_name = require('../package.json').name;
 
@@ -207,12 +208,8 @@ export class IPCify
         const ipc = project.createSourceFile(path.resolve(out, ipc_name), ipc_source_compiled);
         const ipc_class = ipc.getClass(ipc_class_name) as ClassDeclaration;
 
-        const router_template = require(path.resolve(template_path, 'router.js'));
-        const router_source_data = {
-            module_name
-        }
-        const router_source_compiled = handlebars.compile(router_template.source.trim())(router_source_data);
-        const router = project.createSourceFile(path.resolve(out, router_name), router_source_compiled);
+        const router_imports = [] as any[];
+        const router_cases_data = [] as any[];
 
         let save = false;
         for(const class_name in this._classes)
@@ -225,7 +222,8 @@ export class IPCify
             const skeleton_class_name = `${class_name}Skeleton`;
 
             ipc.addImportDeclaration({moduleSpecifier: `./stub/${stub_class_name}`, namedImports: [`${stub_class_name}`]});
-            router.addImportDeclaration({moduleSpecifier: `./skeleton/${skeleton_class_name}`, namedImports: [`${skeleton_class_name}`]});
+            
+            router_imports.push({moduleSpecifier: `./skeleton/${skeleton_class_name}`, namedImports: [`${skeleton_class_name}`]});
 
             const ipc_stub_property_name = stub_class_name.toLowerCase()
             ipc_class.addProperty({
@@ -274,6 +272,8 @@ export class IPCify
                     create_instance = true;
 
                 const message_type = `${class_name.toLowerCase()}-${method_name.toLowerCase()}`;
+
+                router_cases_data.push({type: message_type, skeleton: skeleton_class_name, method: method_name})
 
                 let return_type = method.type ? method.type.getText() : undefined;
                 // TODO: bluebird (etc...) management
@@ -385,8 +385,25 @@ export class IPCify
             }
         }
 
+        const router_template = require(path.resolve(template_path, 'router.js'));
+        const router_source_data = {
+            module_name,
+            cases: [] as any
+        }
+        for(const router_case_data of router_cases_data)
+            router_source_data.cases.push(handlebars.compile(router_template.case.trim())(router_case_data));
+        router_source_data.cases = router_source_data.cases.join(os.EOL);
+        const router_source_compiled = handlebars.compile(router_template.source.trim())(router_source_data);
+        const router = project.createSourceFile(path.resolve(out, router_name), router_source_compiled);
+        for(const router_import of router_imports)
+            router.addImportDeclaration(router_import);
+
         if(save)
-            project.save();
+        {
+            for(const file of project.getSourceFiles())
+                file.formatText();
+            project.saveSync();
+        }
     }
 }
 

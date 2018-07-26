@@ -12,6 +12,6 @@ export class {{class_name}}
     `,
 
     method_body: `
-return await this._ipc.invoke({__type__: '{{message_type}}', {{parameters~}} })
+return await this._ipc.invoke({__type__: '{{message_type}}', {{parameters}} })
     `,
 }
