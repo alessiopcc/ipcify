@@ -1,5 +1,6 @@
 module.exports = {
     source: `
+// @ts-ignore
 import * as uuid from 'uuid';
 import {EventEmitter} from 'events';
 

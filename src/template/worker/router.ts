@@ -1,7 +1,5 @@
 module.exports = {
     source: `
-const __worker__ = this as Worker;
-
 class Router
 {
     public static async route(message: any): Promise<void>
@@ -15,7 +13,8 @@ class Router
     }
 }
 
-__worker__.onmessage = async (message: any) => await Router.route(message);
+// @ts-ignore
+onmessage = async (message: any) => await Router.route(message);
     `,
 
     case: `

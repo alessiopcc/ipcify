@@ -224,7 +224,7 @@ class IPCify
             
             router_imports.push({moduleSpecifier: `./skeleton/${skeleton_class_name}`, namedImports: [`${skeleton_class_name}`]});
 
-            const ipc_stub_property_name = stub_class_name.toLowerCase()
+            const ipc_stub_property_name = class_name.toLowerCase()
             ipc_class.addProperty({
                 name: `_${ipc_stub_property_name}`, 
                 type: stub_class_name,

@@ -1,7 +1,5 @@
 module.exports = {
     source: `
-const __worker__ = this as Worker;
-
 export class {{class_name}}
 {
 
@@ -18,7 +16,8 @@ catch(error)
 {
     response.__error__ = error.message || error;
 }
-__worker__.postMessage(response);
+// @ts-ignore
+postMessage(response);
     `,
 
     creator_body: `
@@ -31,6 +30,7 @@ catch(error)
 {
     response.__error__ = error.message || error;
 }
-__worker__.postMessage(response);
+// @ts-ignore
+postMessage(response);
     `
 }
