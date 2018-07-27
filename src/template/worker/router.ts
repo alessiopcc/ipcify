@@ -14,7 +14,7 @@ class Router
 }
 
 // @ts-ignore
-onmessage = async (message: any) => await Router.route(message);
+onmessage = async (message: MessageEvent) => await Router.route(message.data);
     `,
 
     case: `

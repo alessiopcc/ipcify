@@ -26,6 +26,7 @@ interface ClassThread
 
 class IPCify
 {
+    private static _file_imports: {[path: string]: string[]} = {};
     private static _imports: {[name: string]: string} = {};
     private static _classes: {[name: string]: ClassThread} = {};
 
@@ -63,6 +64,13 @@ class IPCify
             })
 
             console.log('Import:', this._imports)
+        }
+        else
+        {
+            const source_file = node.getSourceFile().fileName
+            if(!this._file_imports[source_file])
+                this._file_imports[source_file] = [];
+            this._file_imports[source_file].push(node.getText());
         }
     }
 
@@ -103,7 +111,7 @@ class IPCify
         {
             switch(decorator)
             {
-                case('Executable'):
+                case ('Executable'):
                     if(node.parent && ts.isClassDeclaration(node.parent) && node.parent.name)
                     {
                         const class_name = node.parent.name.getText();
@@ -120,7 +128,7 @@ class IPCify
                         throw new Error(`Decorator @Executable parse error, ${node}`)
                     break;
 
-                case('execit'):
+                case ('execit'):
                     if(node.parent && ts.isMethodDeclaration(node.parent) && node.parent.name && node.parent.parent && ts.isClassDeclaration(node.parent.parent) && node.parent.parent.name)
                     {
                         const class_name = node.parent.parent.name.getText();
@@ -147,7 +155,7 @@ class IPCify
                         throw new Error(`Decorator @execit parse error, ${node}`)
                     break;
 
-                case('execnew'):
+                case ('execnew'):
                     if(node.parent && ts.isMethodDeclaration(node.parent) && node.parent.name && node.parent.parent && ts.isClassDeclaration(node.parent.parent) && node.parent.parent.name)
                     {
                         const class_name = node.parent.parent.name.getText();
@@ -187,10 +195,10 @@ class IPCify
     public static save(template: Template)
     {
         fs.emptyDirSync(path.resolve(out));
-        
+
         if(!Object.keys(this._classes))
             return;
-        
+
         const project = new Project();
 
         const template_path = path.resolve(__dirname, 'template', template);
@@ -200,7 +208,7 @@ class IPCify
 
         const ipc_template = require(path.resolve(template_path, 'ipc.js'));
         const ipc_source_data = {
-            ipc_class_name, 
+            ipc_class_name,
             exec_path: `./${router_name}`
         }
         const ipc_source_compiled = handlebars.compile(ipc_template.source.trim())(ipc_source_data);
@@ -221,12 +229,12 @@ class IPCify
             const skeleton_class_name = `${class_name}Skeleton`;
 
             ipc.addImportDeclaration({moduleSpecifier: `./stub/${stub_class_name}`, namedImports: [`${stub_class_name}`]});
-            
+
             router_imports.push({moduleSpecifier: `./skeleton/${skeleton_class_name}`, namedImports: [`${skeleton_class_name}`]});
 
             const ipc_stub_property_name = class_name.toLowerCase()
             ipc_class.addProperty({
-                name: `_${ipc_stub_property_name}`, 
+                name: `_${ipc_stub_property_name}`,
                 type: stub_class_name,
                 scope: Scope.Private,
                 initializer: `new ${stub_class_name}(this)`
@@ -252,6 +260,12 @@ class IPCify
             const stub = project.createSourceFile(path.resolve(out, 'stub', `${stub_class_name}.ts`), stub_source_compiled);
             const skeleton = project.createSourceFile(path.resolve(out, 'skeleton', `${skeleton_class_name}.ts`), skeleton_source_compiled);
 
+            if(this._file_imports[this._classes[class_name].path])
+            {
+                // TODO: remove unused
+                for(const imports of this._file_imports[this._classes[class_name].path])
+                    stub.insertText(0, `${imports}${os.EOL}`)
+            }
             const skeleton_class_import_path = path.relative(path.resolve(out, 'skeleton'), this._classes[class_name].path).split('.').slice(0, -1).join('.');
             skeleton.addImportDeclaration({moduleSpecifier: skeleton_class_import_path, namedImports: [class_name]});
 
@@ -276,7 +290,7 @@ class IPCify
 
                 let return_type = method.type ? method.type.getText() : undefined;
                 // TODO: bluebird (etc...) management
-                if(return_type && !return_type.startsWith('Promise')) 
+                if(return_type && !return_type.startsWith('Promise'))
                     return_type = `Promise<${return_type}>`;
 
                 const stub_method = stub_class.insertMethod(method_index, {
@@ -312,8 +326,8 @@ class IPCify
                     const optional = parameter.questionToken ? true : false;
 
                     stub_method.addParameter({
-                        name, 
-                        type, 
+                        name,
+                        type,
                         hasQuestionToken: optional
                     });
                     stub_method_body_data.parameters.push(`${name}`);
@@ -325,12 +339,12 @@ class IPCify
                 const skeleton_method_body_compiled = handlebars.compile(skeleton_template.method_body.trim())(skeleton_method_body_data);
                 stub_method.setBodyText(stub_method_body_compiled);
                 skeleton_method.setBodyText(skeleton_method_body_compiled);
-                
+
                 method_index++;
             });
 
             if(create_instance || this._classes[class_name].creator)
-            {                
+            {
                 if(this._classes[class_name].creator || this._classes[class_name].constructable)
                 {
                     let wrapped_creator: ConstructorDeclaration | MethodDeclaration | undefined;
@@ -342,7 +356,7 @@ class IPCify
                         wrapped_creator = createWrappedNode(this._classes[class_name].creator as ts.MethodDeclaration) as MethodDeclaration;
                         name = wrapped_creator.getName()
                         create = `${class_name}.${name}`
-                    }   
+                    }
                     else if(this._classes[class_name].constructor)
                         wrapped_creator = createWrappedNode(this._classes[class_name].constructor as ts.ConstructorDeclaration) as ConstructorDeclaration;
 
@@ -353,7 +367,7 @@ class IPCify
                         scope: Scope.Public,
                         parameters: [{name: skeleton_method_arg_name, type: 'any'}]
                     });
-    
+
                     const skeleton_creator_body_data = {
                         object: skeleton_instance_property_name,
                         create,
@@ -364,7 +378,7 @@ class IPCify
                     {
                         wrapped_creator.getParameters().forEach((parameter) =>
                         {
-                            const name = parameter.getName();    
+                            const name = parameter.getName();
                             skeleton_creator_body_data.parameters.push(`${skeleton_method_arg_name}.${name}`);
                         });
                     }
@@ -374,7 +388,7 @@ class IPCify
                 }
                 else
                     throw new Error(`${class_name} require an instance but is not constructable`);
-                
+
                 skeleton_class.addProperty({
                     name: skeleton_instance_property_name,
                     type: class_name,

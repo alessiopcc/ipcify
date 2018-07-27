@@ -37,7 +37,7 @@ function prepare()
     _compile_ts();
     _files();
 
-    console.log('Packed!');
+    console.log('Prepared!');
     console.log();
 }
 

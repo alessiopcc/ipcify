@@ -4,6 +4,8 @@ module.exports = {
 import * as uuid from 'uuid';
 import {EventEmitter} from 'events';
 
+const _worker = require('{{exec_path}}')
+
 export declare interface {{ipc_class_name}}
 {
     emit(event: 'error', error: ErrorEvent): boolean;
@@ -27,7 +29,7 @@ export class {{ipc_class_name}} extends EventEmitter
     public restart(): void
     {
         this.kill();
-        this._exec = new Worker('{{exec_path}}');
+        this._exec = new _worker();
 
         this._exec.onerror = (error: ErrorEvent) => this.emit('error', error);
 
