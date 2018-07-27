@@ -264,7 +264,7 @@ class IPCify
             {
                 // TODO: remove unused
                 for(const imports of this._file_imports[this._classes[class_name].path])
-                    stub.insertText(0, `${imports}${os.EOL}`)
+                    stub.insertText(0, `// @ts-ignore${os.EOL}${imports}${os.EOL}`)
             }
             const skeleton_class_import_path = path.relative(path.resolve(out, 'skeleton'), this._classes[class_name].path).split('.').slice(0, -1).join('.');
             skeleton.addImportDeclaration({moduleSpecifier: skeleton_class_import_path, namedImports: [class_name]});
