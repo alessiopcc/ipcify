@@ -4,7 +4,7 @@ module.exports = {
 import * as uuid from 'uuid';
 import {EventEmitter} from 'events';
 
-const _worker = require('{{exec_path}}')
+const _worker = require('worker-loader!{{exec_path}}')
 
 export declare interface {{ipc_class_name}}
 {
