@@ -26,7 +26,7 @@ export class IPC extends EventEmitter {
         this._requests = {};
         this.restart();
 
-        this._stubs = { abc: new ABCStub(this) };
+        this._stubs = { ABC: new ABCStub(this) };
     }
 
     public restart(): void {
@@ -39,11 +39,11 @@ export class IPC extends EventEmitter {
             if (!message || !message.data)
                 return;
 
-            if (message.data.__type__ === 'emit') {
+            if (message.data.__type__ === '__emit__') {
                 this._stubs[message.data.__source__].emit(message.data.__event__, ...(message.data.__data__ || []))
                 return;
             }
-            else if (message.data.__type__ === 'invoke')
+            else if (message.data.__type__ === '__invoke__')
                 return;
 
             const handler = this._requests[message.data.__id__];

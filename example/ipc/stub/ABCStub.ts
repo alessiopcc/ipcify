@@ -19,7 +19,7 @@ export class ABCStub extends EventEmitter {
         return await this._ipc.invoke({ __type__: 'abc-paperino', });
     }
 
-    public async pluto(_, __, ___?: any) {
+    public async pluto(_, __, ___?: any): Promise<number> {
         return await this._ipc.invoke({ __type__: 'abc-pluto', _, __, ___ });
     }
 

@@ -25,7 +25,6 @@ const response: any = {__id__: message.__id__};
 try
 {
     this.{{object}} = await {{create}}({{parameters}});
-
     {{{events}}}
 }
 catch(error)
@@ -38,6 +37,6 @@ postMessage(response);
 
     on_event_body: `
 // @ts-ignore
-postMessage({__type__: 'emit', __source__: '{{source}}', __event__: '{{event}}', __data__: data});
+postMessage({__type__: '__emit__', __source__: '{{source}}', __event__: '{{event}}', __data__: data});
         `
 }

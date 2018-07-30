@@ -20,6 +20,9 @@ const ipc_module_name = require('../package.json').name;
 // TODO: interface wih same name management
 // TODO: duplicate imports management
 // TODO: duplicate events management (and name replacements)
+// TODO: duplicate invoke with events management
+// TODO: events from stub to class
+// TODO: remove unused code (events if not used, etc...)
 
 interface ClassThread
 {
@@ -265,7 +268,7 @@ class IPCify
             router_imports.push({moduleSpecifier: `./skeleton/${skeleton_class_name}`, namedImports: [`${skeleton_class_name}`]});
 
             const ipc_stub_property_name = class_name.toLowerCase()
-            ipc_stubs.push(`${ipc_stub_property_name}: new ${stub_class_name}(this)`);
+            ipc_stubs.push(`${class_name}: new ${stub_class_name}(this)`);
             ipc_get_accessors.push({
                 name: ipc_stub_property_name,
                 bodyText: `return this._stubs['${ipc_stub_property_name}'];`,
