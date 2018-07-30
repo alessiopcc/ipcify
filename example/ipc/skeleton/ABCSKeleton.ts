@@ -47,7 +47,9 @@ export class ABCSkeleton {
             // @ts-ignore
             this.__abc__.on('123', this._on_123);
             // @ts-ignore
-            this.__abc__.on('45.6', this._on_45_6)
+            this.__abc__.on('45.6', this._on_45_6);
+            // @ts-ignore
+            this.__abc__.on('asdasd', this._on_asdasd)
         }
         catch (error) {
             response.__error__ = error.message || error;
@@ -64,6 +66,11 @@ export class ABCSkeleton {
     private static _on_45_6(...data: any[]) {
         // @ts-ignore
         postMessage({ __type__: '__emit__', __source__: 'ABC', __event__: '45.6', __data__: data });
+    }
+
+    private static _on_asdasd(...data: any[]) {
+        // @ts-ignore
+        postMessage({ __type__: '__emit__', __source__: 'ABC', __event__: 'asdasd', __data__: data });
     }
 
     private static __abc__: ABC;

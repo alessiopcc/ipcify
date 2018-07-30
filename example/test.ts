@@ -1,7 +1,7 @@
 import {Executable as exec, execit, execnew, execemit, execinvoke, __invoke__ as er} from 'ipcify';
 import {EventEmitter} from 'events';
 
-@execemit(['123', '45.6'])
+@execemit(['123', '45.6', 'asdasd'])
 @execinvoke(['12345', 'get.42'])
 export declare interface ABC
 {

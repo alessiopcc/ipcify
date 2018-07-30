@@ -5,10 +5,10 @@ import Project, {
     ClassDeclaration,
     ConstructorDeclaration,
     createWrappedNode,
+    InterfaceDeclaration,
     MethodDeclaration,
     Scope,
     ts,
-    InterfaceDeclaration,
 } from 'ts-simple-ast';
 import {ScriptTarget, SyntaxKind} from 'typescript';
 import * as path from 'upath';
@@ -23,6 +23,7 @@ const ipc_module_name = require('../package.json').name;
 // TODO: duplicate invoke with events management
 // TODO: events from stub to class
 // TODO: remove unused code (events if not used, etc...)
+// TODO: general on and once declaration on stub only if needed
 
 interface ClassThread
 {
@@ -40,6 +41,7 @@ class IPCify
     private static _classes: {[name: string]: ClassThread} = {};
     private static _events: {[name: string]: string[]} = {};
     private static _interfaces: {[name: string]: ts.InterfaceDeclaration} = {};
+    private static _invokes: {[name: string]: string[]} = {};
 
     public static parse(node: ts.Node): void
     {
@@ -205,21 +207,21 @@ class IPCify
                     {
                         if(ts.isCallExpression(node.expression) && node.expression.arguments.length === 1 && ts.isArrayLiteralExpression(node.expression.arguments[0]))
                         {
-                            const interface_name = node.parent.name.getText();
-                            this._interfaces[interface_name] = node.parent;
-                            if(!this._events[interface_name])
-                                this._events[interface_name] = [];
+                            const class_name = node.parent.name.getText();
+                            this._interfaces[class_name] = node.parent;
+                            if(!this._events[class_name])
+                                this._events[class_name] = [];
 
                             const array = node.expression.arguments[0] as ts.ArrayLiteralExpression;
                             for(const token of array.elements)
                             {
                                 if(ts.isStringLiteral(token))
-                                    this._events[interface_name].push(token.text);
+                                    this._events[class_name].push(token.text);
                                 else
                                     throw new Error('@execemit only supports string literal');
                             }
 
-                            console.log('Events:', this._events[interface_name], '- Class', interface_name);
+                            console.log('Events:', this._events[class_name], '- Class', class_name);
                         }
                     }
                     else
@@ -227,6 +229,28 @@ class IPCify
                     break;
 
                 case 'execinvoke':
+                    if(node.parent && (ts.isInterfaceDeclaration(node.parent) || ts.isClassDeclaration(node.parent)) && node.parent.name && node.parent.modifiers)
+                    {
+                        if(ts.isCallExpression(node.expression) && node.expression.arguments.length === 1 && ts.isArrayLiteralExpression(node.expression.arguments[0]))
+                        {
+                            const class_name = node.parent.name.getText();
+                            if(!this._invokes[class_name])
+                                this._invokes[class_name] = [];
+
+                            const array = node.expression.arguments[0] as ts.ArrayLiteralExpression;
+                            for(const token of array.elements)
+                            {
+                                if(ts.isStringLiteral(token))
+                                    this._invokes[class_name].push(token.text);
+                                else
+                                    throw new Error('@execinvoke only supports string literal');
+                            }
+
+                            console.log('Invoke:', this._invokes[class_name], '- Class', class_name);
+                        }
+                    }
+                    else
+                        throw new Error(`Decorator @execinvoke parse error, ${node}`)
                     break;
             }
         }

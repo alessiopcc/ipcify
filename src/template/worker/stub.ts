@@ -3,6 +3,8 @@ module.exports = {
 export declare interface {{class_name}}
 {
     emit(event: string, ...data: any[]): boolean;
+    on(event: string, listener: (...data) => void): this;
+    once(event: string, listener: (...data) => void): this;
 }
 
 export class {{class_name}} extends EventEmitter

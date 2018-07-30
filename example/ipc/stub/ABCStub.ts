@@ -8,6 +8,8 @@ export declare interface ABCStub {
     on(event: '45.6', listener: () => void);
     on(event: '123', listener: () => void);
     emit(event: string, ...data: any[]): boolean;
+    on(event: string, listener: (...data) => void): this;
+    once(event: string, listener: (...data) => void): this;
 }
 
 export class ABCStub extends EventEmitter {
