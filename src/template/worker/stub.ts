@@ -3,19 +3,19 @@ module.exports = {
 export declare interface {{class_name}}
 {
     emit(event: string, ...data: any[]): boolean;
-    on(event: string, listener: (...data) => void): this;
-    once(event: string, listener: (...data) => void): this;
+    on(event: string, listener: (...data: any[]) => void): this;
+    once(event: string, listener: (...data: any[]) => void): this;
 }
 
-export class {{class_name}} extends EventEmitter
+export class {{class_name}} {{#if events}}extends EventEmitter{{/if}}
 {
+    // @ts-ignore
     private _ipc: any;
-    private _callbacks: {[__method__: string]: (...data: any[]) => void};
+    private _callbacks: {[__method__: string]: (...data: any[]) => any};
 
     public constructor(ipc: any)
     {
-        super();
-        
+        {{#if events}}super();{{/if}}
         this._ipc = ipc;
         this._callbacks = {};
     }

@@ -6,7 +6,7 @@ import * as uuid from 'uuid';
 import { EventEmitter } from 'events';
 import { ABCSkeleton } from "./skeleton/ABCSkeleton";
 
-export class Router {
+export class ExecRouter {
     public static _emitter = new EventEmitter();
 
     public static async route(message: any): Promise<void> {
@@ -44,4 +44,4 @@ export class Router {
 }
 
 // @ts-ignore
-onmessage = async (message: MessageEvent) => await Router.route(message.data);
+onmessage = async (message: MessageEvent) => await ExecRouter.route(message.data);

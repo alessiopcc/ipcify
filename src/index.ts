@@ -15,6 +15,8 @@ import * as path from 'upath';
 
 const ipc_module_name = require('../package.json').name;
 
+// TODO: execit for accessors
+
 // TODO: parse declaration of __invoke__
 
 // TODO: default export management
@@ -269,8 +271,9 @@ class IPCify
 
         const template_path = path.resolve(__dirname, 'template', template);
         const ipc_name = 'IPC.ts';
-        const ipc_class_name = 'IPC'
-        const router_name = 'Router.ts';
+        const ipc_class_name = 'IPC';
+        const router_name = 'ExecRouter.ts';
+        const router_class_name = 'ExecRouter';
 
         const ipc_imports = [] as any
         const ipc_stubs = [] as any;
@@ -282,7 +285,7 @@ class IPCify
         let save = false;
         for(const class_name in this._classes)
         {
-            if(!this._classes[class_name].methods.length)
+            if(!this._classes[class_name].methods.length && !this._events[class_name] && !this._invokes[class_name])
                 continue;
             save = true;
 
@@ -297,14 +300,15 @@ class IPCify
             ipc_stubs.push(`${class_name}: new ${stub_class_name}(this)`);
             ipc_get_accessors.push({
                 name: ipc_stub_property_name,
-                bodyText: `return this._stubs['${ipc_stub_property_name}'];`,
-                scope: Scope.Public
+                bodyText: `return this._stubs['${class_name}'];`,
+                scope: Scope.Public,
+                returnType: stub_class_name
             })
 
             const stub_template = require(path.resolve(template_path, 'stub.js'));
             const stub_source_data = {
                 class_name: stub_class_name,
-                // events: stub_event_signatures.join(os.EOL)
+                events: this._events[class_name] ? true : false 
             }
             const stub_source_compiled = handlebars.compile(stub_template.source.trim())(stub_source_data);
 
@@ -326,7 +330,7 @@ class IPCify
             const skeleton_class_import_path = path.relative(path.resolve(out, 'skeleton'), this._classes[class_name].path).split('.').slice(0, -1).join('.');
             skeleton.addImportDeclaration({moduleSpecifier: skeleton_class_import_path, namedImports: [class_name]});
 
-            skeleton.addStatements(`(${class_name} as any).__router__ = require('../${router_name}').Router`);
+            skeleton.addStatements(`(${class_name} as any).__router__ = require('../${router_name}').${router_class_name}`);
 
             const stub_class = stub.getClass(stub_class_name) as ClassDeclaration;
             const skeleton_class = skeleton.getClass(skeleton_class_name) as ClassDeclaration;
@@ -499,7 +503,7 @@ class IPCify
                     const listener_method = stub_class.addMethod({
                         name: listener_name,
                         scope: Scope.Public,
-                        parameters: [{name: 'listener', type: '(...data: any[]) => void'}]
+                        parameters: [{name: 'listener', type: '(...data: any[]) => any'}]
                     })
                     const listener_body_data = {
                         method: invoke
@@ -526,6 +530,7 @@ class IPCify
 
         const router_template = require(path.resolve(template_path, 'router.js'));
         const router_source_data = {
+            router_class_name,
             module_name,
             cases: [] as any
         }

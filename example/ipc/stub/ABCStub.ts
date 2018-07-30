@@ -8,8 +8,8 @@ export declare interface ABCStub {
     on(event: '45.6', listener: () => void);
     on(event: '123', listener: () => void);
     emit(event: string, ...data: any[]): boolean;
-    on(event: string, listener: (...data) => void): this;
-    once(event: string, listener: (...data) => void): this;
+    on(event: string, listener: (...data: any[]) => void): this;
+    once(event: string, listener: (...data: any[]) => void): this;
 }
 
 export class ABCStub extends EventEmitter {
@@ -25,12 +25,12 @@ export class ABCStub extends EventEmitter {
         return await this._ipc.invoke({ __type__: 'abc-pluto', _, __, ___ });
     }
 
+    // @ts-ignore
     private _ipc: any;
-    private _callbacks: { [__method__: string]: (...data: any[]) => void };
+    private _callbacks: { [__method__: string]: (...data: any[]) => any };
 
     public constructor(ipc: any) {
         super();
-
         this._ipc = ipc;
         this._callbacks = {};
     }
@@ -51,11 +51,11 @@ export class ABCStub extends EventEmitter {
         postMessage(response);
     }
 
-    public listen_12345(listener: (...data: any[]) => void) {
+    public listen_12345(listener: (...data: any[]) => any) {
         this._callbacks['12345'] = listener;
     }
 
-    public listen_get_42(listener: (...data: any[]) => void) {
+    public listen_get_42(listener: (...data: any[]) => any) {
         this._callbacks['get.42'] = listener;
     }
 }

@@ -4,7 +4,7 @@ module.exports = {
 import * as uuid from 'uuid';
 import {EventEmitter} from 'events';
 
-export class Router
+export class {{router_class_name}}
 {
     public static _emitter = new EventEmitter();
 
@@ -40,7 +40,7 @@ export class Router
 }
 
 // @ts-ignore
-onmessage = async (message: MessageEvent) => await Router.route(message.data);
+onmessage = async (message: MessageEvent) => await {{router_class_name}}.route(message.data);
     `,
 
     case: `

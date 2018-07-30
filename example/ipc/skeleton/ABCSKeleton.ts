@@ -75,4 +75,4 @@ export class ABCSkeleton {
 
     private static __abc__: ABC;
 }
-(ABC as any).__router__ = require('../Router.ts').Router
+(ABC as any).__router__ = require('../ExecRouter.ts').ExecRouter
