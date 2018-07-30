@@ -35,7 +35,7 @@ catch(error)
 postMessage(response);
     `,
 
-    on_event_body: `
+    event_listener_body: `
 // @ts-ignore
 postMessage({__type__: '__emit__', __source__: '{{source}}', __event__: '{{event}}', __data__: data});
         `

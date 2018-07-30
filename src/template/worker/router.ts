@@ -4,7 +4,7 @@ module.exports = {
 import * as uuid from 'uuid';
 import {EventEmitter} from 'events';
 
-class Router
+export class Router
 {
     public static _emitter = new EventEmitter();
 
@@ -21,7 +21,7 @@ class Router
         }
     }
 
-    public static invoke(identifier: string, ...data: any[]): Promise<any>
+    public static invoke(source: string, method: string, ...data: any[]): Promise<any>
     {
         return new Promise((resolve, reject) => 
         {
@@ -34,7 +34,7 @@ class Router
             });
 
             // @ts-ignore
-            postMessage({__type__: '__invoke__', __id__: id, __data__: data})
+            postMessage({__type__: '__invoke__', __id__: id, __source__: source, __method__: method, __data__: data})
         });
     }
 }

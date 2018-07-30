@@ -15,6 +15,8 @@ import * as path from 'upath';
 
 const ipc_module_name = require('../package.json').name;
 
+// TODO: parse declaration of __invoke__
+
 // TODO: default export management
 // TODO: class wih same name management
 // TODO: interface wih same name management
@@ -324,6 +326,8 @@ class IPCify
             const skeleton_class_import_path = path.relative(path.resolve(out, 'skeleton'), this._classes[class_name].path).split('.').slice(0, -1).join('.');
             skeleton.addImportDeclaration({moduleSpecifier: skeleton_class_import_path, namedImports: [class_name]});
 
+            skeleton.addStatements(`(${class_name} as any).__router__ = require('../${router_name}').Router`);
+
             const stub_class = stub.getClass(stub_class_name) as ClassDeclaration;
             const skeleton_class = skeleton.getClass(skeleton_class_name) as ClassDeclaration;
 
@@ -450,7 +454,7 @@ class IPCify
                                 source: class_name,
                                 event
                             }
-                            const event_listener_body_compiled = handlebars.compile(skeleton_template.on_event_body.trim())(event_listener_body_data);
+                            const event_listener_body_compiled = handlebars.compile(skeleton_template.event_listener_body.trim())(event_listener_body_data);
                             event_listener_method.setBodyText(event_listener_body_compiled);
 
                             const whole_event_regex = new RegExp(`(<=\\s|\\b)${event}(\\b|\\s|$)`);
@@ -482,6 +486,27 @@ class IPCify
                     isStatic: true,
                     scope: Scope.Private,
                 });
+            }
+
+            if(this._invokes[class_name])
+            {
+                for(const invoke of this._invokes[class_name])
+                {
+                    const listener_name = `listen_${invoke.replace(/[^A-Z0-9]/ig, '_')}`;
+
+                    // TODO: types!
+
+                    const listener_method = stub_class.addMethod({
+                        name: listener_name,
+                        scope: Scope.Public,
+                        parameters: [{name: 'listener', type: '(...data: any[]) => void'}]
+                    })
+                    const listener_body_data = {
+                        method: invoke
+                    }
+                    const listener_body_compiled = handlebars.compile(stub_template.listener_body.trim())(listener_body_data);
+                    listener_method.setBodyText(listener_body_compiled);
+                }
             }
         }
 

@@ -6,7 +6,7 @@ import * as uuid from 'uuid';
 import { EventEmitter } from 'events';
 import { ABCSkeleton } from "./skeleton/ABCSkeleton";
 
-class Router {
+export class Router {
     public static _emitter = new EventEmitter();
 
     public static async route(message: any): Promise<void> {
@@ -28,7 +28,7 @@ class Router {
         }
     }
 
-    public static invoke(identifier: string, ...data: any[]): Promise<any> {
+    public static invoke(source: string, method: string, ...data: any[]): Promise<any> {
         return new Promise((resolve, reject) => {
             const id = uuid.v4();
             this._emitter.once(id, (message: any) => {
@@ -38,7 +38,7 @@ class Router {
             });
 
             // @ts-ignore
-            postMessage({ __type__: '__invoke__', __id__: id, __data__: data })
+            postMessage({ __type__: '__invoke__', __id__: id, __source__: source, __method__: method, __data__: data })
         });
     }
 }

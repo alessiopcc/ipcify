@@ -43,8 +43,10 @@ export class IPC extends EventEmitter {
                 this._stubs[message.data.__source__].emit(message.data.__event__, ...(message.data.__data__ || []))
                 return;
             }
-            else if (message.data.__type__ === '__invoke__')
+            else if (message.data.__type__ === '__invoke__') {
+                this._stubs[message.data.__source__].invoke(message)
                 return;
+            }
 
             const handler = this._requests[message.data.__id__];
             if (handler) {
