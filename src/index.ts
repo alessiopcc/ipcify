@@ -8,6 +8,7 @@ import Project, {
     MethodDeclaration,
     Scope,
     ts,
+    InterfaceDeclaration,
 } from 'ts-simple-ast';
 import {ScriptTarget, SyntaxKind} from 'typescript';
 import * as path from 'upath';
@@ -18,6 +19,7 @@ const ipc_module_name = require('../package.json').name;
 // TODO: class wih same name management
 // TODO: interface wih same name management
 // TODO: duplicate imports management
+// TODO: duplicate events management (and name replacements)
 
 interface ClassThread
 {
@@ -272,16 +274,17 @@ class IPCify
 
             const stub_template = require(path.resolve(template_path, 'stub.js'));
             const stub_source_data = {
-                class_name: stub_class_name
+                class_name: stub_class_name,
+                // events: stub_event_signatures.join(os.EOL)
             }
             const stub_source_compiled = handlebars.compile(stub_template.source.trim())(stub_source_data);
-
+            
             const skeleton_template = require(path.resolve(template_path, 'skeleton.js'));
             const skeleton_source_data = {
                 class_name: skeleton_class_name
             }
             const skeleton_source_compiled = handlebars.compile(skeleton_template.source.trim())(skeleton_source_data);
-
+            
             const stub = project.createSourceFile(path.resolve(out, 'stub', `${stub_class_name}.ts`), stub_source_compiled);
             const skeleton = project.createSourceFile(path.resolve(out, 'skeleton', `${skeleton_class_name}.ts`), skeleton_source_compiled);
 
@@ -369,6 +372,8 @@ class IPCify
                 method_index++;
             });
 
+            // const stub_event_signatures = [] as any;
+
             if(create_instance || this._classes[class_name].creator)
             {
                 if(this._classes[class_name].creator || this._classes[class_name].constructable)
@@ -397,10 +402,46 @@ class IPCify
                     const skeleton_creator_body_parameters = [] as any;
                     if(wrapped_creator)
                         wrapped_creator.getParameters().forEach((parameter) => skeleton_creator_body_parameters.push(`${skeleton_method_arg_name}.${parameter.getName()}`));
+                    
+                    const skeleton_creator_events = [] as any;
+
+                    if(this._events[class_name])
+                    {
+                        const wrapped_interface = createWrappedNode(this._interfaces[class_name]) as InterfaceDeclaration;
+
+                        for(const event of this._events[class_name])
+                        {
+                            const event_listener_name = `_on_${event.replace(/[^A-Z0-9]/ig, '_')}`;
+                            skeleton_creator_events.push(`// @ts-ignore${os.EOL}this.${skeleton_instance_property_name}.on('${event}', this.${event_listener_name})`);
+                            
+                            const event_listener_method = skeleton_class.addMethod({
+                                name: event_listener_name,
+                                scope: Scope.Private,
+                                isStatic: true,
+                                parameters: [{name: 'data', type: 'any[]', isRestParameter: true}]
+                            })
+                            const event_listener_body_data = {
+                                source: class_name,
+                                event
+                            }
+                            const event_listener_body_compiled = handlebars.compile(skeleton_template.on_event_body.trim())(event_listener_body_data);
+                            event_listener_method.setBodyText(event_listener_body_compiled);
+                        
+                            const whole_event_regex = new RegExp(`(<=\\s|\\b)${event}(\\b|\\s|$)`);
+                            for(const member of wrapped_interface.getMembers())
+                            {
+                                const signature = member.print();
+                                if(signature.match(whole_event_regex))
+                                    stub_event_signatures.push(signature);
+                            }
+                        }
+                    }
+
                     const skeleton_creator_body_data = {
                         object: skeleton_instance_property_name,
                         create,
-                        parameters: skeleton_creator_body_parameters.join(', ')
+                        parameters: skeleton_creator_body_parameters.join(', '),
+                        events: skeleton_creator_events.join(`; ${os.EOL}`)
                     };
                     const skeleton_method_body_compiled = handlebars.compile(skeleton_template.creator_body.trim())(skeleton_creator_body_data);
                     skeleton_creator.setBodyText(skeleton_method_body_compiled);

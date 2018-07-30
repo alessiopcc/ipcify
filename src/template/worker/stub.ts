@@ -1,5 +1,11 @@
 module.exports = {
     source: `
+export declare interface {{class_name}}
+{
+    emit(event: string, ...data: any[]): this;
+    {{{events}}}
+}
+
 export class {{class_name}} extends EventEmitter
 {
     private _ipc: any;

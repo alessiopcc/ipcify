@@ -44,12 +44,27 @@ export class ABCSkeleton {
         const response: any = { __id__: message.__id__ };
         try {
             this.__abc__ = await ABC.doit(message.a);
+
+            // @ts-ignore
+            this.__abc__.on('123', this._on_123);
+            // @ts-ignore
+            this.__abc__.on('45.6', this._on_45_6)
         }
         catch (error) {
             response.__error__ = error.message || error;
         }
         // @ts-ignore
         postMessage(response);
+    }
+
+    private static _on_123(...data: any[]) {
+        // @ts-ignore
+        postMessage({ __type__: 'emit', __source__: 'ABC', __event__: '123', __data__: data });
+    }
+
+    private static _on_45_6(...data: any[]) {
+        // @ts-ignore
+        postMessage({ __type__: 'emit', __source__: 'ABC', __event__: '45.6', __data__: data });
     }
 
     private static __abc__: ABC;
