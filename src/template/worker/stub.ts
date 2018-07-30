@@ -1,11 +1,13 @@
 module.exports = {
     source: `
-export class {{class_name}}
+export class {{class_name}} extends EventEmitter
 {
     private _ipc: any;
 
     public constructor(ipc: any)
     {
+        super();
+        
         this._ipc = ipc;
     }
 }

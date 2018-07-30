@@ -3,12 +3,32 @@ export function Executable(target: any)
     return target;
 }
 
-export function execit(_: any, __: string, descriptor: PropertyDescriptor)
+// @ts-ignore
+export function execemit(template: string[])
+{
+    return function(target: any)
+    {
+        return target;
+    }
+}
+
+// @ts-ignore
+export function execinvoke(template: string[])
+{
+    return function(target: any)
+    {
+        return target;
+    }
+}
+
+// @ts-ignore
+export function execit(target: any, property: string, descriptor: PropertyDescriptor)
 {
     return descriptor;
 }
 
-export function execnew(_: any, __: string, descriptor: PropertyDescriptor)
+// @ts-ignore
+export function execnew(target: any, property: string, descriptor: PropertyDescriptor)
 {
     return descriptor;
 }

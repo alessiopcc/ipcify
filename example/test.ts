@@ -1,7 +1,19 @@
-import {Executable as tt, execit, execnew} from 'ipcify/decorators';
+import {Executable as exec, execit, execnew, execemit, execinvoke} from 'ipcify';
 import {EventEmitter} from 'events';
 
-@tt
+@execemit(['123', '456'])
+@execinvoke(`
+    12345
+`)
+export declare interface ABC
+{
+    on(event: '123', listener: () => void);
+    once(event: '123', listener: () => void);
+
+    on(event: '12345', listener: () => void);
+}
+
+@exec
 export class ABC extends EventEmitter
 {
     private a: number;

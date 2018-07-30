@@ -1,5 +1,6 @@
 import * as fs from 'fs-extra';
 import handlebars from 'handlebars';
+import * as os from 'os';
 import Project, {
     ClassDeclaration,
     ConstructorDeclaration,
@@ -10,11 +11,14 @@ import Project, {
 } from 'ts-simple-ast';
 import {ScriptTarget, SyntaxKind} from 'typescript';
 import * as path from 'upath';
-import * as os from 'os';
 
 const ipc_module_name = require('../package.json').name;
 
-// TODO: default export and class wih same name management
+// TODO: default export management
+// TODO: class wih same name management
+// TODO: interface wih same name management
+// TODO: duplicate imports management
+
 interface ClassThread
 {
     path: string;
@@ -29,6 +33,8 @@ class IPCify
     private static _file_imports: {[path: string]: string[]} = {};
     private static _imports: {[name: string]: string} = {};
     private static _classes: {[name: string]: ClassThread} = {};
+    private static _events: {[name: string]: string[]} = {};
+    private static _interfaces: {[name: string]: ts.InterfaceDeclaration} = {};
 
     public static parse(node: ts.Node): void
     {
@@ -111,7 +117,7 @@ class IPCify
         {
             switch(decorator)
             {
-                case ('Executable'):
+                case 'Executable':
                     if(node.parent && ts.isClassDeclaration(node.parent) && node.parent.name)
                     {
                         const class_name = node.parent.name.getText();
@@ -128,7 +134,7 @@ class IPCify
                         throw new Error(`Decorator @Executable parse error, ${node}`)
                     break;
 
-                case ('execit'):
+                case 'execit':
                     if(node.parent && ts.isMethodDeclaration(node.parent) && node.parent.name && node.parent.parent && ts.isClassDeclaration(node.parent.parent) && node.parent.parent.name)
                     {
                         const class_name = node.parent.parent.name.getText();
@@ -155,7 +161,7 @@ class IPCify
                         throw new Error(`Decorator @execit parse error, ${node}`)
                     break;
 
-                case ('execnew'):
+                case 'execnew':
                     if(node.parent && ts.isMethodDeclaration(node.parent) && node.parent.name && node.parent.parent && ts.isClassDeclaration(node.parent.parent) && node.parent.parent.name)
                     {
                         const class_name = node.parent.parent.name.getText();
@@ -188,6 +194,35 @@ class IPCify
                     else
                         throw new Error(`Decorator @execnew parse error, ${node}`)
                     break;
+
+                case 'execemit':
+                    if(node.parent && ts.isInterfaceDeclaration(node.parent) && node.parent.name && node.parent.modifiers)
+                    {
+                        if(ts.isCallExpression(node.expression) && node.expression.arguments.length === 1 && ts.isArrayLiteralExpression(node.expression.arguments[0]))
+                        {
+                            const interface_name = node.parent.name.getText();
+                            this._interfaces[interface_name] = node.parent;
+                            if(!this._events[interface_name])
+                                this._events[interface_name] = [];
+
+                            const array = node.expression.arguments[0] as ts.ArrayLiteralExpression;
+                            for(const token of array.elements)
+                            {
+                                if(ts.isStringLiteral(token))
+                                    this._events[interface_name].push(token.text);
+                                else
+                                    throw new Error('@execemit only supports string literal');
+                            }
+
+                            console.log('Events:', this._events[interface_name], '- Class', interface_name);
+                        }
+                    }
+                    else
+                        throw new Error(`Decorator @execemit parse error, ${node}`)
+                    break;
+
+                case 'execinvoke':
+                    break;
             }
         }
     }
@@ -206,14 +241,9 @@ class IPCify
         const ipc_class_name = 'IPC'
         const router_name = 'Router.ts';
 
-        const ipc_template = require(path.resolve(template_path, 'ipc.js'));
-        const ipc_source_data = {
-            ipc_class_name,
-            exec_path: `./${router_name}`
-        }
-        const ipc_source_compiled = handlebars.compile(ipc_template.source.trim())(ipc_source_data);
-        const ipc = project.createSourceFile(path.resolve(out, ipc_name), ipc_source_compiled);
-        const ipc_class = ipc.getClass(ipc_class_name) as ClassDeclaration;
+        const ipc_imports = [] as any
+        const ipc_stubs = [] as any;
+        const ipc_get_accessors = [] as any;
 
         const router_imports = [] as any[];
         const router_cases_data = [] as any[];
@@ -228,20 +258,15 @@ class IPCify
             const stub_class_name = `${class_name}Stub`;
             const skeleton_class_name = `${class_name}Skeleton`;
 
-            ipc.addImportDeclaration({moduleSpecifier: `./stub/${stub_class_name}`, namedImports: [`${stub_class_name}`]});
+            ipc_imports.push({moduleSpecifier: `./stub/${stub_class_name}`, namedImports: [`${stub_class_name}`]});
 
             router_imports.push({moduleSpecifier: `./skeleton/${skeleton_class_name}`, namedImports: [`${skeleton_class_name}`]});
 
             const ipc_stub_property_name = class_name.toLowerCase()
-            ipc_class.addProperty({
-                name: `_${ipc_stub_property_name}`,
-                type: stub_class_name,
-                scope: Scope.Private,
-                initializer: `new ${stub_class_name}(this)`
-            });
-            ipc_class.addGetAccessor({
+            ipc_stubs.push(`${ipc_stub_property_name}: new ${stub_class_name}(this)`);
+            ipc_get_accessors.push({
                 name: ipc_stub_property_name,
-                bodyText: `return this._${ipc_stub_property_name};`,
+                bodyText: `return this._stubs['${ipc_stub_property_name}'];`,
                 scope: Scope.Public
             })
 
@@ -308,17 +333,8 @@ class IPCify
                     parameters: [{name: skeleton_method_arg_name, type: 'any'}]
                 });
 
-                const stub_method_body_data = {
-                    message_type,
-                    parameters: [] as any
-                };
-
-                const skeleton_method_body_data = {
-                    object: wrapped_method.isStatic() ? class_name : `this.${skeleton_instance_property_name}`,
-                    method: method_name,
-                    parameters: [] as any
-                };
-
+                const stub_method_body_parameters = [] as any;
+                const skeleton_method_body_parameters = [] as any;
                 method.parameters.forEach((parameter) =>
                 {
                     const name = parameter.name.getText();
@@ -330,11 +346,21 @@ class IPCify
                         type,
                         hasQuestionToken: optional
                     });
-                    stub_method_body_data.parameters.push(`${name}`);
-                    skeleton_method_body_data.parameters.push(`${skeleton_method_arg_name}.${name}`);
+                    stub_method_body_parameters.push(`${name}`);
+                    skeleton_method_body_parameters.push(`${skeleton_method_arg_name}.${name}`);
                 });
-                stub_method_body_data.parameters = stub_method_body_data.parameters.join(', ');
-                skeleton_method_body_data.parameters = skeleton_method_body_data.parameters.join(', ');
+
+                const stub_method_body_data = {
+                    message_type,
+                    parameters: stub_method_body_parameters.join(', ')
+                };
+
+                const skeleton_method_body_data = {
+                    object: wrapped_method.isStatic() ? class_name : `this.${skeleton_instance_property_name}`,
+                    method: method_name,
+                    parameters: skeleton_method_body_parameters.join(', ')
+                };
+
                 const stub_method_body_compiled = handlebars.compile(stub_template.method_body.trim())(stub_method_body_data);
                 const skeleton_method_body_compiled = handlebars.compile(skeleton_template.method_body.trim())(skeleton_method_body_data);
                 stub_method.setBodyText(stub_method_body_compiled);
@@ -368,21 +394,14 @@ class IPCify
                         parameters: [{name: skeleton_method_arg_name, type: 'any'}]
                     });
 
+                    const skeleton_creator_body_parameters = [] as any;
+                    if(wrapped_creator)
+                        wrapped_creator.getParameters().forEach((parameter) => skeleton_creator_body_parameters.push(`${skeleton_method_arg_name}.${parameter.getName()}`));
                     const skeleton_creator_body_data = {
                         object: skeleton_instance_property_name,
                         create,
-                        parameters: [] as any
+                        parameters: skeleton_creator_body_parameters.join(', ')
                     };
-
-                    if(wrapped_creator)
-                    {
-                        wrapped_creator.getParameters().forEach((parameter) =>
-                        {
-                            const name = parameter.getName();
-                            skeleton_creator_body_data.parameters.push(`${skeleton_method_arg_name}.${name}`);
-                        });
-                    }
-                    skeleton_creator_body_data.parameters = skeleton_creator_body_data.parameters.join(', ');
                     const skeleton_method_body_compiled = handlebars.compile(skeleton_template.creator_body.trim())(skeleton_creator_body_data);
                     skeleton_creator.setBodyText(skeleton_method_body_compiled);
                 }
@@ -397,6 +416,20 @@ class IPCify
                 });
             }
         }
+
+        const ipc_template = require(path.resolve(template_path, 'ipc.js'));
+        const ipc_source_data = {
+            ipc_class_name,
+            exec_path: `./${router_name}`,
+            stubs: ipc_stubs.join(`, ${os.EOL}`)
+        }
+        const ipc_source_compiled = handlebars.compile(ipc_template.source.trim())(ipc_source_data);
+        const ipc = project.createSourceFile(path.resolve(out, ipc_name), ipc_source_compiled);
+        for(const ipc_import of ipc_imports)
+            ipc.addImportDeclaration(ipc_import);
+        const ipc_class = ipc.getClass(ipc_class_name) as ClassDeclaration;
+        for(const ipc_get_accessor of ipc_get_accessors)
+            ipc_class.addGetAccessor(ipc_get_accessor);
 
         const router_template = require(path.resolve(template_path, 'router.js'));
         const router_source_data = {
@@ -417,8 +450,8 @@ class IPCify
             {
                 file.formatText();
                 file.insertText(0, `/** This file is autogenerated. Do not edit */${os.EOL}`);
-                file.insertText(0, `// tslint:disable${os.EOL}`);
                 file.insertText(0, `// @ts-nocheck${os.EOL}`);
+                file.insertText(0, `// tslint:disable${os.EOL}`);
             }
             project.saveSync();
         }

@@ -18,12 +18,16 @@ export class {{ipc_class_name}} extends EventEmitter
     private _exec!: Worker;
     private _requests: {[__id__: string]: (message: any) => void};
 
+    private _stubs: {[__source__: string]: any};
+
     public constructor()
     {
         super();
 
         this._requests = {};
-        this.restart();        
+        this.restart();
+        
+        this._stubs = { {{~stubs~}} };
     }
 
     public restart(): void
@@ -35,7 +39,15 @@ export class {{ipc_class_name}} extends EventEmitter
 
         this._exec.onmessage = (message: MessageEvent) => 
         {
-            if(!message || !message.data || !message.data.__id__)
+            if(!message || !message.data)
+                return;
+
+            if(message.data.__type__ === 'emit')
+            {
+                this._stubs[message.data.__source__].emit(message.data.__event__, ...(message.data.__data__ || []))
+                return;
+            }
+            else if(message.data.__type__ === 'invoke')
                 return;
 
             const handler = this._requests[message.data.__id__];
