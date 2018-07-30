@@ -6,7 +6,7 @@ import * as uuid from 'uuid';
 import { EventEmitter } from 'events';
 import { ABCStub } from "./stub/ABCStub";
 
-const _worker = require('worker-loader!./ExecRouter.ts')
+const _worker = require('worker-loader!./Router.ts')
 
 export declare interface IPC {
     emit(event: 'error', error: ErrorEvent): boolean;

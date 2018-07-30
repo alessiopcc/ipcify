@@ -272,14 +272,17 @@ class IPCify
         const template_path = path.resolve(__dirname, 'template', template);
         const ipc_name = 'IPC.ts';
         const ipc_class_name = 'IPC';
-        const router_name = 'ExecRouter.ts';
-        const router_class_name = 'ExecRouter';
+        const router_name = 'Router.ts';
+        const router_class_name = 'Router';
+
+        const router_injector_method = '__inject__';
 
         const ipc_imports = [] as any
         const ipc_stubs = [] as any;
         const ipc_get_accessors = [] as any;
 
         const router_imports = [] as any[];
+        const router_statements = [] as any[];
         const router_cases_data = [] as any[];
 
         let save = false;
@@ -295,6 +298,7 @@ class IPCify
             ipc_imports.push({moduleSpecifier: `./stub/${stub_class_name}`, namedImports: [`${stub_class_name}`]});
 
             router_imports.push({moduleSpecifier: `./skeleton/${skeleton_class_name}`, namedImports: [`${skeleton_class_name}`]});
+            router_statements.push(`${skeleton_class_name}.${router_injector_method}(${router_class_name})`);
 
             const ipc_stub_property_name = class_name.toLowerCase()
             ipc_stubs.push(`${class_name}: new ${stub_class_name}(this)`);
@@ -330,10 +334,17 @@ class IPCify
             const skeleton_class_import_path = path.relative(path.resolve(out, 'skeleton'), this._classes[class_name].path).split('.').slice(0, -1).join('.');
             skeleton.addImportDeclaration({moduleSpecifier: skeleton_class_import_path, namedImports: [class_name]});
 
-            skeleton.addStatements(`(${class_name} as any).__router__ = require('../${router_name}').${router_class_name}`);
-
             const stub_class = stub.getClass(stub_class_name) as ClassDeclaration;
             const skeleton_class = skeleton.getClass(skeleton_class_name) as ClassDeclaration;
+
+            const skeleton_injector_param = {name: 'router', type: 'any'}
+            const skeleton_injector = skeleton_class.addMethod({
+                name: router_injector_method,
+                isStatic: true,
+                scope: Scope.Public,
+                parameters: [skeleton_injector_param]
+            });
+            skeleton_injector.setBodyText(`(${class_name} as any).__router__ = ${skeleton_injector_param.name}`);
 
             const skeleton_instance_property_name = `__${class_name.toLowerCase()}__`
             const skeleton_method_arg_name = 'message';
@@ -541,6 +552,8 @@ class IPCify
         const router = project.createSourceFile(path.resolve(out, router_name), router_source_compiled);
         for(const router_import of router_imports)
             router.addImportDeclaration(router_import);
+        for(const router_statement of router_statements)
+            router.addStatements(router_statement);
 
         if(save)
         {

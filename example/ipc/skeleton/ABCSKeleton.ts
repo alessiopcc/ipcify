@@ -58,6 +58,10 @@ export class ABCSkeleton {
         postMessage(response);
     }
 
+    public static __inject__(router: any) {
+        (ABC as any).__router__ = router
+    }
+
     private static _on_123(...data: any[]) {
         // @ts-ignore
         postMessage({ __type__: '__emit__', __source__: 'ABC', __event__: '123', __data__: data });
@@ -75,4 +79,3 @@ export class ABCSkeleton {
 
     private static __abc__: ABC;
 }
-(ABC as any).__router__ = require('../ExecRouter.ts').ExecRouter
