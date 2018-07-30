@@ -2,8 +2,7 @@ module.exports = {
     source: `
 export declare interface {{class_name}}
 {
-    emit(event: string, ...data: any[]): this;
-    {{{events}}}
+    emit(event: string, ...data: any[]): boolean;
 }
 
 export class {{class_name}} extends EventEmitter

@@ -9,7 +9,7 @@ export declare interface ABC
 {
     on(event: '123', listener: () => void);
     on(event: '45.6', listener: () => void);
-    once(event: '45.6', listener: () => void);
+    once(event: '45.6', listener: () => void): this;
 
     on(event: '12345', listener: () => void);
 }

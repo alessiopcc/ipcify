@@ -40,7 +40,7 @@ class IPCify
 
     public static parse(node: ts.Node): void
     {
-        switch(node.kind) 
+        switch(node.kind)
         {
             case SyntaxKind.ImportDeclaration:
                 this._import_declaration(node as ts.ImportDeclaration);
@@ -63,7 +63,7 @@ class IPCify
             if(!node.importClause || !node.importClause.namedBindings || !ts.isNamedImports(node.importClause.namedBindings))
                 return;
 
-            node.importClause.namedBindings.elements.forEach((element) => 
+            node.importClause.namedBindings.elements.forEach((element) =>
             {
                 if(element.propertyName)
                     this._imports[element.name.text] = element.propertyName.text;
@@ -278,13 +278,13 @@ class IPCify
                 // events: stub_event_signatures.join(os.EOL)
             }
             const stub_source_compiled = handlebars.compile(stub_template.source.trim())(stub_source_data);
-            
+
             const skeleton_template = require(path.resolve(template_path, 'skeleton.js'));
             const skeleton_source_data = {
                 class_name: skeleton_class_name
             }
             const skeleton_source_compiled = handlebars.compile(skeleton_template.source.trim())(skeleton_source_data);
-            
+
             const stub = project.createSourceFile(path.resolve(out, 'stub', `${stub_class_name}.ts`), stub_source_compiled);
             const skeleton = project.createSourceFile(path.resolve(out, 'skeleton', `${skeleton_class_name}.ts`), skeleton_source_compiled);
 
@@ -305,7 +305,7 @@ class IPCify
 
             let create_instance = false;
             let method_index = 0;
-            this._classes[class_name].methods.forEach((method) => 
+            this._classes[class_name].methods.forEach((method) =>
             {
                 const wrapped_method = createWrappedNode(method) as MethodDeclaration;
                 const method_name = wrapped_method.getName();
@@ -372,8 +372,6 @@ class IPCify
                 method_index++;
             });
 
-            // const stub_event_signatures = [] as any;
-
             if(create_instance || this._classes[class_name].creator)
             {
                 if(this._classes[class_name].creator || this._classes[class_name].constructable)
@@ -402,18 +400,19 @@ class IPCify
                     const skeleton_creator_body_parameters = [] as any;
                     if(wrapped_creator)
                         wrapped_creator.getParameters().forEach((parameter) => skeleton_creator_body_parameters.push(`${skeleton_method_arg_name}.${parameter.getName()}`));
-                    
+
                     const skeleton_creator_events = [] as any;
 
                     if(this._events[class_name])
                     {
+                        const stub_interface = stub.getInterface(stub_class_name) as InterfaceDeclaration;
                         const wrapped_interface = createWrappedNode(this._interfaces[class_name]) as InterfaceDeclaration;
 
                         for(const event of this._events[class_name])
                         {
                             const event_listener_name = `_on_${event.replace(/[^A-Z0-9]/ig, '_')}`;
                             skeleton_creator_events.push(`// @ts-ignore${os.EOL}this.${skeleton_instance_property_name}.on('${event}', this.${event_listener_name})`);
-                            
+
                             const event_listener_method = skeleton_class.addMethod({
                                 name: event_listener_name,
                                 scope: Scope.Private,
@@ -426,13 +425,14 @@ class IPCify
                             }
                             const event_listener_body_compiled = handlebars.compile(skeleton_template.on_event_body.trim())(event_listener_body_data);
                             event_listener_method.setBodyText(event_listener_body_compiled);
-                        
+
                             const whole_event_regex = new RegExp(`(<=\\s|\\b)${event}(\\b|\\s|$)`);
+                            const stub_interface_insert_position = stub_interface.getMembers()[0].getStart();
                             for(const member of wrapped_interface.getMembers())
                             {
                                 const signature = member.print();
                                 if(signature.match(whole_event_regex))
-                                    stub_event_signatures.push(signature);
+                                    stub_interface.insertText(stub_interface_insert_position, `${signature}${os.EOL}`);
                             }
                         }
                     }
@@ -504,7 +504,7 @@ const module_name = process.argv.slice(2, 3)[0];
 const template = process.argv.slice(3, 4)[0] as Template;
 const out = process.argv.slice(4, 5)[0];
 const files = process.argv.slice(5);
-files.forEach(file => 
+files.forEach(file =>
 {
     let source = ts.createSourceFile(file, fs.readFileSync(file).toString(), ScriptTarget.ES2015, true);
     IPCify.parse(source);
