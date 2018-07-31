@@ -84,6 +84,11 @@ export class {{ipc_class_name}} extends EventEmitter
             this._exec.postMessage(request);
         });
     }
+
+    public get exec(): any
+    {
+        return this._exec;
+    }
 }
     `
 }
