@@ -75,6 +75,10 @@ export class IPC extends EventEmitter {
         });
     }
 
+    public get exec(): any {
+        return this._exec;
+    }
+
     public get abc(): ABCStub {
         return this._stubs['ABC'];
     }

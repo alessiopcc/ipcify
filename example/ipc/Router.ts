@@ -20,6 +20,9 @@ export class Router {
             case 'abc-pluto':
                 await ABCSkeleton.pluto(message);
                 break;
+            case 'abc-doit':
+                await ABCSkeleton.doit(message);
+                break;
             case '__invoke__':
                 this._emitter.emit(message.__id__, message);
                 break;

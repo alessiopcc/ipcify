@@ -15,6 +15,8 @@ import * as path from 'upath';
 
 const ipc_module_name = require('../package.json').name;
 
+// TODO: flag on stub if instance is created
+
 // TODO: execit for accessors
 
 // TODO: parse declaration of __invoke__
@@ -54,6 +56,9 @@ class IPCify
             case SyntaxKind.ImportDeclaration:
                 this._import_declaration(node as ts.ImportDeclaration);
                 break;
+            case SyntaxKind.InterfaceDeclaration:
+                this._interface_declaration(node as ts.InterfaceDeclaration);
+                break;
             case SyntaxKind.Decorator:
                 this._decorator(node as ts.Decorator);
                 break;
@@ -89,6 +94,12 @@ class IPCify
                 this._file_imports[source_file] = [];
             this._file_imports[source_file].push(node.getText());
         }
+    }
+
+    private static _interface_declaration(node: ts.InterfaceDeclaration): void
+    {
+        const name = node.name.getText();
+        this._interfaces[name] = node;
     }
 
     private static _constructor(node: ts.ConstructorDeclaration): void
@@ -207,12 +218,11 @@ class IPCify
                     break;
 
                 case 'execemit':
-                    if(node.parent && ts.isInterfaceDeclaration(node.parent) && node.parent.name && node.parent.modifiers)
+                    if(node.parent && ts.isClassDeclaration(node.parent) && node.parent.name && node.parent.modifiers)
                     {
                         if(ts.isCallExpression(node.expression) && node.expression.arguments.length === 1 && ts.isArrayLiteralExpression(node.expression.arguments[0]))
                         {
                             const class_name = node.parent.name.getText();
-                            this._interfaces[class_name] = node.parent;
                             if(!this._events[class_name])
                                 this._events[class_name] = [];
 
@@ -233,7 +243,7 @@ class IPCify
                     break;
 
                 case 'execinvoke':
-                    if(node.parent && (ts.isInterfaceDeclaration(node.parent) || ts.isClassDeclaration(node.parent)) && node.parent.name && node.parent.modifiers)
+                    if(node.parent && ts.isClassDeclaration(node.parent) && node.parent.name && node.parent.modifiers)
                     {
                         if(ts.isCallExpression(node.expression) && node.expression.arguments.length === 1 && ts.isArrayLiteralExpression(node.expression.arguments[0]))
                         {
@@ -312,7 +322,7 @@ class IPCify
             const stub_template = require(path.resolve(template_path, 'stub.js'));
             const stub_source_data = {
                 class_name: stub_class_name,
-                events: this._events[class_name] ? true : false 
+                events: this._events[class_name] ? true : false
             }
             const stub_source_compiled = handlebars.compile(stub_template.source.trim())(stub_source_data);
 
@@ -435,6 +445,16 @@ class IPCify
                     else if(this._classes[class_name].constructor)
                         wrapped_creator = createWrappedNode(this._classes[class_name].constructor as ts.ConstructorDeclaration) as ConstructorDeclaration;
 
+                    const message_type = `${class_name.toLowerCase()}-${name.toLowerCase()}`;
+
+                    router_cases_data.push({type: message_type, skeleton: skeleton_class_name, method: name})
+
+                    const stub_creator = stub_class.insertMethod(method_index, {
+                        name,
+                        isAsync: true,
+                        scope: Scope.Public,
+                    });
+
                     const skeleton_creator = skeleton_class.insertMethod(method_index, {
                         name,
                         isStatic: true,
@@ -443,12 +463,28 @@ class IPCify
                         parameters: [{name: skeleton_method_arg_name, type: 'any'}]
                     });
 
+                    const stub_creator_body_parameters = [] as any;
                     const skeleton_creator_body_parameters = [] as any;
                     if(wrapped_creator)
-                        wrapped_creator.getParameters().forEach((parameter) => skeleton_creator_body_parameters.push(`${skeleton_method_arg_name}.${parameter.getName()}`));
+                    {
+                        wrapped_creator.getParameters().forEach((parameter) => 
+                        {
+                            const name = parameter.getName() as string;
+                            const type = parameter.compilerNode.type ? parameter.compilerNode.type.getText() : undefined;
+                            const optional = parameter.isOptional();
+
+                            stub_creator.addParameter({
+                                name,
+                                type,
+                                hasQuestionToken: optional
+                            });
+                            stub_creator_body_parameters.push(`${name}`);
+
+                            skeleton_creator_body_parameters.push(`${skeleton_method_arg_name}.${parameter.getName()}`);
+                        });
+                    }
 
                     const skeleton_creator_events = [] as any;
-
                     if(this._events[class_name])
                     {
                         const stub_interface = stub.getInterface(stub_class_name) as InterfaceDeclaration;
@@ -482,6 +518,13 @@ class IPCify
                             }
                         }
                     }
+
+                    const stub_creator_body_data = {
+                        message_type,
+                        parameters: stub_creator_body_parameters.join(', ')
+                    };
+                    const stub_method_body_compiled = handlebars.compile(stub_template.method_body.trim())(stub_creator_body_data);
+                    stub_creator.setBodyText(stub_method_body_compiled);
 
                     const skeleton_creator_body_data = {
                         object: skeleton_instance_property_name,

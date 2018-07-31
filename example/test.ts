@@ -1,8 +1,6 @@
 import {Executable as exec, execit, execnew, execemit, execinvoke, __invoke__ as er} from 'ipcify';
 import {EventEmitter} from 'events';
 
-@execemit(['123', '45.6', 'asdasd'])
-@execinvoke(['12345', 'get.42'])
 export declare interface ABC
 {
     on(event: '123', listener: () => void);
@@ -12,6 +10,8 @@ export declare interface ABC
 
 declare function er(context: any, identifier: 'get.42', data: number): Promise<number>;
 
+@execemit(['123', '45.6', 'asdasd'])
+@execinvoke(['12345', 'get.42'])
 @exec
 export class ABC extends EventEmitter
 {
