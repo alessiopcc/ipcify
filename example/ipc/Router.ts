@@ -20,6 +20,12 @@ export class Router {
             case 'abc-pluto':
                 await ABCSkeleton.pluto(message);
                 break;
+            case 'abc-getter':
+                await ABCSkeleton.getter(message);
+                break;
+            case 'abc-setter':
+                await ABCSkeleton.setter(message);
+                break;
             case 'abc-doit':
                 await ABCSkeleton.doit(message);
                 break;

@@ -25,6 +25,14 @@ export class ABCStub extends EventEmitter {
         return await this._ipc.invoke({ __type__: 'abc-pluto', _, __, ___ });
     }
 
+    public async getter(): Promise<number> {
+        return await this._ipc.invoke({ __type__: 'abc-getter', });
+    }
+
+    public async setter(value: any) {
+        return await this._ipc.invoke({ __type__: 'abc-setter', value });
+    }
+
     public async doit(a?: number) {
         return await this._ipc.invoke({ __type__: 'abc-doit', a });
     }

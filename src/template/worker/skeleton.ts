@@ -20,6 +20,34 @@ catch(error)
 postMessage(response);
     `,
 
+    getter_body: `
+const response: any = {__id__: message.__id__};
+try
+{
+    response.__return__ = {{object}}.{{method}};
+}
+catch(error)
+{
+    response.__error__ = error.message || error;
+}
+// @ts-ignore
+postMessage(response);
+    `,
+
+    setter_body: `
+const response: any = {__id__: message.__id__};
+try
+{
+    response.__return__ = {{object}}.{{method}} = {{parameters}};
+}
+catch(error)
+{
+    response.__error__ = error.message || error;
+}
+// @ts-ignore
+postMessage(response);
+    `,
+
     creator_body: `
 const response: any = {__id__: message.__id__};
 try

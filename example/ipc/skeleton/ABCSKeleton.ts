@@ -40,6 +40,30 @@ export class ABCSkeleton {
         postMessage(response);
     }
 
+    public static async getter(message: any) {
+        const response: any = { __id__: message.__id__ };
+        try {
+            response.__return__ = this.__abc__.getter;
+        }
+        catch (error) {
+            response.__error__ = error.message || error;
+        }
+        // @ts-ignore
+        postMessage(response);
+    }
+
+    public static async setter(message: any) {
+        const response: any = { __id__: message.__id__ };
+        try {
+            response.__return__ = this.__abc__.setter = message.value;
+        }
+        catch (error) {
+            response.__error__ = error.message || error;
+        }
+        // @ts-ignore
+        postMessage(response);
+    }
+
     public static async doit(message: any) {
         const response: any = { __id__: message.__id__ };
         try {

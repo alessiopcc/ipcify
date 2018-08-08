@@ -34,4 +34,10 @@ export class ABC extends EventEmitter
 
     @execnew
     public static doit(a?: number) {return new ABC()}
+
+    @execit
+    public get getter(): number {return this.a};
+
+    @execit
+    public set setter(value: any) {this.a = value};
 }

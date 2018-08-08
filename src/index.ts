@@ -17,8 +17,6 @@ const ipc_module_name = require('../package.json').name;
 
 // TODO: flag on stub if instance is created
 
-// TODO: execit for accessors
-
 // TODO: parse declaration of __invoke__
 
 // TODO: default export management
@@ -37,7 +35,7 @@ interface ClassThread
     constructable: boolean,
     constructor: ts.ConstructorDeclaration | null,
     creator: ts.MethodDeclaration | null,
-    methods: ts.MethodDeclaration[];
+    methods: (ts.MethodDeclaration | ts.GetAccessorDeclaration | ts.SetAccessorDeclaration)[];
 }
 
 class IPCify
@@ -157,7 +155,7 @@ class IPCify
                     break;
 
                 case 'execit':
-                    if(node.parent && ts.isMethodDeclaration(node.parent) && node.parent.name && node.parent.parent && ts.isClassDeclaration(node.parent.parent) && node.parent.parent.name)
+                    if(node.parent && (ts.isMethodDeclaration(node.parent) || ts.isGetAccessorDeclaration(node.parent) || ts.isSetAccessorDeclaration(node.parent)) && node.parent.name && node.parent.parent && ts.isClassDeclaration(node.parent.parent) && node.parent.parent.name)
                     {
                         const class_name = node.parent.parent.name.getText();
                         const executable = this._classes[class_name];
@@ -363,6 +361,9 @@ class IPCify
             let method_index = 0;
             this._classes[class_name].methods.forEach((method) =>
             {
+                const is_accessor = !ts.isMethodDeclaration(method);
+                const is_getter = ts.isGetAccessorDeclaration(method);
+
                 const wrapped_method = createWrappedNode(method) as MethodDeclaration;
                 const method_name = wrapped_method.getName();
                 if(!wrapped_method.isStatic())
@@ -419,9 +420,10 @@ class IPCify
                     method: method_name,
                     parameters: skeleton_method_body_parameters.join(', ')
                 };
+                const skeleton_method_body_template = is_accessor ? (is_getter ? skeleton_template.getter_body : skeleton_template.setter_body) : skeleton_template.method_body;
 
                 const stub_method_body_compiled = handlebars.compile(stub_template.method_body.trim())(stub_method_body_data);
-                const skeleton_method_body_compiled = handlebars.compile(skeleton_template.method_body.trim())(skeleton_method_body_data);
+                const skeleton_method_body_compiled = handlebars.compile(skeleton_method_body_template.trim())(skeleton_method_body_data);
                 stub_method.setBodyText(stub_method_body_compiled);
                 skeleton_method.setBodyText(skeleton_method_body_compiled);
 
